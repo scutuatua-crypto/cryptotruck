@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoTruck - Portfolio Manager 🚚</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        const TrendingUp = () => <span>📈</span>;
+        const TrendingDown = () => <span>📉</span>;
+        const Plus = () => <span>➕</span>;
+        const Trash2 = () => <span>🗑️</span>;
+        const RefreshCw = ({ spinning }) => <span style={spinning ? {display: 'inline-block', animation: 'spin 1s linear infinite'} : {}}>🔄</span>;
+        const Truck = () => <span>🚚</span>;
+        
+        const CryptoTruck = () => {
+            const [portfolio, setPortfolio] = useState([]);
+            const [prices, setPrices] = useState({});
+            const [loading, setLoading] = useState(false);
+            const [showAddModal, setShowAddModal] = useState(false);
+            const [newCoin, setNewCoin] = useState({ symbol: '', amount: '' });
+
+            const popularCoins = [
+                { symbol: 'bitcoin', name: 'Bitcoin', ticker: 'BTC' },
+                { symbol: 'ethereum', name: 'Ethereum', ticker: 'ETH' },
+                { symbol: 'binancecoin', name: 'BNB', ticker: 'BNB' },
+                { symbol: 'cardano', name: 'Cardano', ticker: 'ADA' },
+                { symbol: 'solana', name: 'Solana', ticker: 'SOL' },
+                { symbol: 'ripple', name: 'XRP', ticker: 'XRP' },
+                { symbol: 'polkadot', name: 'Polkadot', ticker: 'DOT' },
+                { symbol: 'dogecoin', name: 'Dogecoin', ticker: 'DOGE' },
+                { symbol: 'avalanche-2', name: 'Avalanche', ticker: 'AVAX' },
+                { symbol: 'chainlink', name: 'Chainlink', ticker: 'LINK' },
+            ];
+
+            const fetchPrices = async () => {
+                setLoading(true);
+                try {
+                    const symbols = portfolio.map(p => p.symbol).join(',');
+                    if (symbols) {
+                        const response = await fetch(
+                            `https://api.coingecko.com/api/v3/simple/price?ids=${symbols}&vs_currencies=usd&include_24hr_change=true`
+                        );
+                        const data = await response.json();
+                        setPrices(data);
+                    }
+                } catch (error) {
+                    console.error('Error fetching prices:', error);
+                }
+                setLoading(false);
+            };
+
+            useEffect(() => {
+                const saved = localStorage.getItem('cryptotruck-portfolio');
+                if (saved) {
+                    setPortfolio(JSON.parse(saved));
+                }
+            }, []);
+
+            useEffect(() => {
+                if (portfolio.length > 0) {
+                    fetchPrices();
+                    const interval = setInterval(fetchPrices, 60000);
+                    return () => clearInterval(interval);
+                }
+            }, [portfolio]);
+
+            const savePortfolio = (newPortfolio) => {
+                setPortfolio(newPortfolio);
+                localStorage.setItem('cryptotruck-portfolio', JSON.stringify(newPortfolio));
+            };
+
+            const addCoin = () => {
+                if (newCoin.symbol && newCoin.amount) {
+                    const coin = popularCoins.find(c => c.symbol === newCoin.symbol);
+                    if (coin) {
+                        const updated = [...portfolio, {
+                            id: Date.now(),
+                            symbol: coin.symbol,
+                            name: coin.name,
+                            ticker: coin.ticker,
+                            amount: parseFloat(newCoin.amount),
+                            addedAt: new Date().toISOString()
+                        }];
+                        savePortfolio(updated);
+                        setNewCoin({ symbol: '', amount: '' });
+                        setShowAddModal(false);
+                    }
+                }
+            };
+
+            const removeCoin = (id) => {
+                const updated = portfolio.filter(p => p.id !== id);
+                savePortfolio(updated);
+            };
+
+            const calculateTotal = () => {
+                return portfolio.reduce((total, coin) => {
+                    const price = prices[coin.symbol]?.usd || 0;
+                    return total + (coin.amount * price);
+                }, 0);
+            };
+
+            const total = calculateTotal();
+
+            return (
+                <div style={{minHeight: '100vh', background: 'linear-gradient(to bottom right, #1a1a2e, #16213e, #0f3460)'}}>
+                    {/* Header */}
+                    <div style={{background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(255,255,255,0.1)'}}>
+                        <div style={{maxWidth: '1200px', margin: '0 auto', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px'}}>
+                            <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+                                <div style={{background: 'linear-gradient(to right, #f59e0b, #ef4444)', padding: '8px', borderRadius: '8px', fontSize: '24px'}}>
+                                    <Truck />
+                                </div>
+                                <div>
+                                    <h1 style={{fontSize: '24px', fontWeight: 'bold', color: 'white'}}>CryptoTruck</h1>
+                                    <p style={{fontSize: '14px', color: '#9ca3af'}}>Trucking to the Moon 🚀</p>
+                                </div>
