@@ -164,6 +164,14 @@ const fetchTONTransactions = async (addr) => {
   } catch { return []; }
 };
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+const TRUSTWALLET_CHAIN = { eth:'ethereum', bsc:'smartchain', pol:'polygon', avax:'avalanche', arb:'arbitrum', sol:'solana', ton:'ton', dot:'polkadot' };
+
+const getExplorerUrl = (chain, address) => {
+  const urls = { eth:`https://etherscan.io/address/${address}`, bsc:`https://bscscan.com/address/${address}`, pol:`https://polygonscan.com/address/${address}`, avax:`https://snowtrace.io/address/${address}`, arb:`https://arbiscan.io/address/${address}`, sol:`https://solscan.io/account/${address}`, ton:`https://tonscan.org/address/${address}`, dot:`https://polkadot.subscan.io/account/${address}` };
+  return urls[chain] || `https://blockscan.com/address/${address}`;
+};
+
 // ─── Sub-components ──────────────────────────────────────────────────────────
 const Spinner = ({size=16}) => <span className="spin" style={{display:'inline-block',fontSize:size}}>⟳</span>;
 
@@ -186,7 +194,7 @@ const ChainBadge = ({chain}) => {
 // ─── Portfolio Tab ────────────────────────────────────────────────────────────
 const PortfolioTab = ({ portfolio, setPortfolio, prices, setPrices, loading, setLoading }) => {
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ coinId:'bitcoin', ticker:'BTC', name:'Bitcoin', chain:'eth', amount:'' });
+  const [form, setForm] = useState({ coinId:'bitcoin', ticker:'BTC', name:'Bitcoin', chain:'eth', amount:'', customId:'' });
   const [search, setSearch] = useState('');
   const [filterChain, setFilterChain] = useState('all');
 
@@ -211,9 +219,11 @@ const PortfolioTab = ({ portfolio, setPortfolio, prices, setPrices, loading, set
 
   const addHolding = () => {
     if (!form.amount || isNaN(parseFloat(form.amount))) return;
-    const coin = DEFAULT_COINS.find(c=>c.id===form.coinId) || { id:form.coinId, name:form.name, ticker:form.ticker, chain:form.chain };
+    const effectiveId = form.coinId === 'custom' ? form.customId.trim() : form.coinId;
+    if (!effectiveId) return;
+    const coin = DEFAULT_COINS.find(c=>c.id===effectiveId) || { id:effectiveId, name:form.name||effectiveId, ticker:form.ticker||effectiveId.toUpperCase(), chain:form.chain };
     save([...portfolio, { id:Date.now(), coinId:coin.id, name:coin.name, ticker:coin.ticker, chain:coin.chain, amount:parseFloat(form.amount), addedAt:new Date().toISOString() }]);
-    setForm({ coinId:'bitcoin', ticker:'BTC', name:'Bitcoin', chain:'eth', amount:'' });
+    setForm({ coinId:'bitcoin', ticker:'BTC', name:'Bitcoin', chain:'eth', amount:'', customId:'' });
     setShowAdd(false);
   };
 
@@ -281,7 +291,7 @@ const PortfolioTab = ({ portfolio, setPortfolio, prices, setPrices, loading, set
                     <td>
                       <div style={{display:'flex',alignItems:'center',gap:10}}>
                         <img
-                          src={`https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/${p.chain === 'eth' ? 'ethereum' : p.chain === 'bsc' ? 'smartchain' : p.chain === 'pol' ? 'polygon' : p.chain}/info/logo.png`}
+                          src={`https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/${TRUSTWALLET_CHAIN[p.chain] || p.chain}/info/logo.png`}
                           alt="" style={{width:32,height:32,borderRadius:'50%',background:'#1e3a5f'}}
                           onError={e=>{e.target.style.display='none'}}
                         />
@@ -329,7 +339,7 @@ const PortfolioTab = ({ portfolio, setPortfolio, prices, setPrices, loading, set
                 <>
                   <div>
                     <label style={{fontSize:12,color:'#94a3b8',marginBottom:6,display:'block'}}>CoinGecko ID</label>
-                    <input className="input" placeholder="e.g. uniswap" value={form.coinId==='custom'?'':form.coinId} onChange={e=>setForm(f=>({...f,coinId:e.target.value}))} />
+                    <input className="input" placeholder="e.g. uniswap" value={form.customId} onChange={e=>setForm(f=>({...f,customId:e.target.value}))} />
                   </div>
                   <div style={{display:'flex',gap:10}}>
                     <div style={{flex:1}}>
@@ -469,14 +479,7 @@ const WalletsTab = ({ wallets, setWallets, addNotification }) => {
                       </div>
                     )}
                     <div style={{display:'flex',gap:6}}>
-                      <a href={
-                        w.chain==='ton' ? `https://tonscan.org/address/${w.address}` :
-                        w.chain==='eth' ? `https://etherscan.io/address/${w.address}` :
-                        w.chain==='bsc' ? `https://bscscan.com/address/${w.address}` :
-                        w.chain==='pol' ? `https://polygonscan.com/address/${w.address}` :
-                        w.chain==='arb' ? `https://arbiscan.io/address/${w.address}` :
-                        `https://explorer.${w.chain}.network/address/${w.address}`
-                      } target="_blank" rel="noopener noreferrer">
+                      <a href={getExplorerUrl(w.chain, w.address)} target="_blank" rel="noopener noreferrer">
                         <button className="btn-ghost" style={{fontSize:11,padding:'4px 8px'}}>🔗 Explorer</button>
                       </a>
                       <button className="btn-danger" onClick={()=>remove(w.id)} style={{fontSize:11,padding:'4px 8px'}}>✕</button>
@@ -754,10 +757,7 @@ const BadgesTab = ({ portfolio, wallets, notifications, splashlogs, setSplashlog
 
   // Compute earned badges
   const earned = new Set();
-  if (portfolio.reduce((s,p)=>s+(p.amount*(0)),0) >= 0) {
-    // always earn reef-native if added identity
-    if (LS.get('ct-identity',null)) earned.add('reef-native');
-  }
+  if (LS.get('ct-identity',null)) earned.add('reef-native');
   if (wallets.some(w=>w.chain==='ton')) earned.add('ton-pioneer');
   if ([...new Set(wallets.map(w=>w.chain))].length>=5) earned.add('multi-chain');
   if (wallets.some(w=>w.type==='multisig')) earned.add('multisig');
@@ -1068,7 +1068,8 @@ const IdentityTab = ({ portfolio, wallets, splashlogs }) => {
     setEditMode(false);
   };
 
-  const totalPortValue = portfolio.reduce((s,p)=>s+(p.amount*0),0);
+  // unused in render but kept for future use
+  // const totalPortValue = portfolio.reduce(…);
 
   const timeline = [
     { year:'2021', event:'🌊 scutua01 identity created', badge:'reef-native' },
@@ -1264,8 +1265,7 @@ const App = () => {
               style={{padding:'8px 14px',background:'transparent',border:'none',borderBottom: tab===t.id?'2px solid #0ea5e9':'2px solid transparent',color:tab===t.id?'#38bdf8':'#64748b',cursor:'pointer',fontSize:13,fontWeight:600,whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:5,transition:'all .2s'}}
               onClick={()=>setTab(t.id)}>
               <span>{t.emoji}</span>
-              <span style={{display:'none'}}>{t.label}</span>
-              <span style={{display:'inline'}}>{t.label}</span>
+              <span>{t.label}</span>
               {t.badge && <span style={{background:'#ef4444',color:'#fff',borderRadius:'50%',width:16,height:16,fontSize:10,display:'flex',alignItems:'center',justifyContent:'center'}}>{t.badge}</span>}
             </button>
           ))}
