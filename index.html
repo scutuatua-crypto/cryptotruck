@@ -1,149 +1,1297 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CryptoTruck - Portfolio Manager 🚚</title>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            -webkit-font-smoothing: antialiased;
-        }
-        
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        
-        .animate-spin {
-            animation: spin 1s linear infinite;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🚚 CryptoTruck v2 – Super Boss Mode</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Inter',sans-serif;background:#0a0f1e;color:#e2e8f0;-webkit-font-smoothing:antialiased;}
+    ::-webkit-scrollbar{width:6px;height:6px;}
+    ::-webkit-scrollbar-track{background:#0f172a;}
+    ::-webkit-scrollbar-thumb{background:#1e3a5f;border-radius:3px;}
+    @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.5;}}
+    @keyframes slideIn{from{transform:translateY(-10px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+    @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+    @keyframes glow{0%,100%{box-shadow:0 0 5px #0ea5e9;}50%{box-shadow:0 0 20px #0ea5e9,0 0 40px #0ea5e933;}}
+    .spin{animation:spin 1s linear infinite;}
+    .pulse{animation:pulse 2s ease-in-out infinite;}
+    .slide-in{animation:slideIn .3s ease-out;}
+    .fade-in{animation:fadeIn .5s ease-out;}
+    .glow{animation:glow 3s ease-in-out infinite;}
+    .tab-btn{transition:all .2s;}
+    .tab-btn:hover{background:rgba(14,165,233,.15) !important;}
+    .tab-btn.active{background:rgba(14,165,233,.25) !important;border-color:#0ea5e9 !important;color:#38bdf8 !important;}
+    .card{background:rgba(15,23,42,.8);border:1px solid rgba(30,58,95,.6);border-radius:12px;backdrop-filter:blur(10px);}
+    .card:hover{border-color:rgba(14,165,233,.4);transition:border-color .2s;}
+    .btn-primary{background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-weight:600;transition:all .2s;}
+    .btn-primary:hover{background:linear-gradient(135deg,#38bdf8,#0ea5e9);transform:translateY(-1px);}
+    .btn-danger{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-weight:600;transition:all .2s;}
+    .btn-danger:hover{opacity:.85;}
+    .btn-ghost{background:transparent;color:#94a3b8;border:1px solid rgba(148,163,184,.3);border-radius:8px;padding:6px 12px;cursor:pointer;transition:all .2s;}
+    .btn-ghost:hover{border-color:#0ea5e9;color:#38bdf8;}
+    .input{background:rgba(15,23,42,.9);border:1px solid rgba(30,58,95,.8);border-radius:8px;padding:10px 14px;color:#e2e8f0;width:100%;font-size:14px;outline:none;transition:border .2s;}
+    .input:focus{border-color:#0ea5e9;box-shadow:0 0 0 2px rgba(14,165,233,.2);}
+    .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:.3px;}
+    .badge-blue{background:rgba(14,165,233,.2);color:#38bdf8;border:1px solid rgba(14,165,233,.3);}
+    .badge-green{background:rgba(34,197,94,.2);color:#4ade80;border:1px solid rgba(34,197,94,.3);}
+    .badge-red{background:rgba(239,68,68,.2);color:#f87171;border:1px solid rgba(239,68,68,.3);}
+    .badge-yellow{background:rgba(245,158,11,.2);color:#fbbf24;border:1px solid rgba(245,158,11,.3);}
+    .badge-coral{background:rgba(249,115,22,.2);color:#fb923c;border:1px solid rgba(249,115,22,.3);}
+    .badge-purple{background:rgba(168,85,247,.2);color:#c084fc;border:1px solid rgba(168,85,247,.3);}
+    .badge-teal{background:rgba(20,184,166,.2);color:#2dd4bf;border:1px solid rgba(20,184,166,.3);}
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;}
+    .modal{background:#0f172a;border:1px solid rgba(30,58,95,.9);border-radius:16px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;padding:24px;}
+    .notification-dot{width:8px;height:8px;background:#ef4444;border-radius:50%;display:inline-block;}
+    .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+    .status-online{background:#22c55e;box-shadow:0 0 6px #22c55e;}
+    .status-offline{background:#6b7280;}
+    .status-warning{background:#f59e0b;box-shadow:0 0 6px #f59e0b;}
+    table{width:100%;border-collapse:collapse;}
+    th{text-align:left;padding:10px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#64748b;border-bottom:1px solid rgba(30,58,95,.5);}
+    td{padding:12px;border-bottom:1px solid rgba(30,58,95,.3);font-size:14px;}
+    tr:hover td{background:rgba(14,165,233,.05);}
+    .progress{background:rgba(30,58,95,.5);border-radius:4px;height:6px;overflow:hidden;}
+    .progress-bar{height:100%;border-radius:4px;background:linear-gradient(90deg,#0ea5e9,#38bdf8);transition:width .5s ease;}
+    select{background:rgba(15,23,42,.9);border:1px solid rgba(30,58,95,.8);border-radius:8px;padding:10px 14px;color:#e2e8f0;font-size:14px;outline:none;cursor:pointer;}
+    select:focus{border-color:#0ea5e9;}
+  </style>
 </head>
 <body>
-    <div id="root"></div>
-    
-    <script type="text/babel">
-        const { useState, useEffect } = React;
-        
-        const TrendingUp = () => <span>📈</span>;
-        const TrendingDown = () => <span>📉</span>;
-        const Plus = () => <span>➕</span>;
-        const Trash2 = () => <span>🗑️</span>;
-        const RefreshCw = ({ spinning }) => <span style={spinning ? {display: 'inline-block', animation: 'spin 1s linear infinite'} : {}}>🔄</span>;
-        const Truck = () => <span>🚚</span>;
-        
-        const CryptoTruck = () => {
-            const [portfolio, setPortfolio] = useState([]);
-            const [prices, setPrices] = useState({});
-            const [loading, setLoading] = useState(false);
-            const [showAddModal, setShowAddModal] = useState(false);
-            const [newCoin, setNewCoin] = useState({ symbol: '', amount: '' });
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
 
-            const popularCoins = [
-                { symbol: 'bitcoin', name: 'Bitcoin', ticker: 'BTC' },
-                { symbol: 'ethereum', name: 'Ethereum', ticker: 'ETH' },
-                { symbol: 'binancecoin', name: 'BNB', ticker: 'BNB' },
-                { symbol: 'cardano', name: 'Cardano', ticker: 'ADA' },
-                { symbol: 'solana', name: 'Solana', ticker: 'SOL' },
-                { symbol: 'ripple', name: 'XRP', ticker: 'XRP' },
-                { symbol: 'polkadot', name: 'Polkadot', ticker: 'DOT' },
-                { symbol: 'dogecoin', name: 'Dogecoin', ticker: 'DOGE' },
-                { symbol: 'avalanche-2', name: 'Avalanche', ticker: 'AVAX' },
-                { symbol: 'chainlink', name: 'Chainlink', ticker: 'LINK' },
-            ];
+// ─── Constants ──────────────────────────────────────────────────────────────
+const LS = {
+  get: (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
 
-            const fetchPrices = async () => {
-                setLoading(true);
-                try {
-                    const symbols = portfolio.map(p => p.symbol).join(',');
-                    if (symbols) {
-                        const response = await fetch(
-                            `https://api.coingecko.com/api/v3/simple/price?ids=${symbols}&vs_currencies=usd&include_24hr_change=true`
-                        );
-                        const data = await response.json();
-                        setPrices(data);
-                    }
-                } catch (error) {
-                    console.error('Error fetching prices:', error);
-                }
-                setLoading(false);
-            };
+const CHAINS = {
+  eth:  { name:'Ethereum',  short:'ETH',  color:'#627eea', emoji:'🔷' },
+  bsc:  { name:'BNB Chain', short:'BSC',  color:'#f3ba2f', emoji:'🟡' },
+  pol:  { name:'Polygon',   short:'MATIC',color:'#8247e5', emoji:'🟣' },
+  avax: { name:'Avalanche', short:'AVAX', color:'#e84142', emoji:'🔺' },
+  arb:  { name:'Arbitrum',  short:'ARB',  color:'#28a0f0', emoji:'🔵' },
+  sol:  { name:'Solana',    short:'SOL',  color:'#9945ff', emoji:'🟪' },
+  ton:  { name:'TON',       short:'TON',  color:'#0098ea', emoji:'💎' },
+  dot:  { name:'Polkadot',  short:'DOT',  color:'#e6007a', emoji:'🩷' },
+};
 
-            useEffect(() => {
-                const saved = localStorage.getItem('cryptotruck-portfolio');
-                if (saved) {
-                    setPortfolio(JSON.parse(saved));
-                }
-            }, []);
+const DEFAULT_COINS = [
+  { id:'bitcoin',     name:'Bitcoin',   ticker:'BTC', chain:'eth'  },
+  { id:'ethereum',    name:'Ethereum',  ticker:'ETH', chain:'eth'  },
+  { id:'the-open-network', name:'Toncoin', ticker:'TON', chain:'ton' },
+  { id:'solana',      name:'Solana',    ticker:'SOL', chain:'sol'  },
+  { id:'polkadot',    name:'Polkadot',  ticker:'DOT', chain:'dot'  },
+  { id:'binancecoin', name:'BNB',       ticker:'BNB', chain:'bsc'  },
+  { id:'matic-network',name:'Polygon',  ticker:'MATIC',chain:'pol' },
+  { id:'avalanche-2', name:'Avalanche', ticker:'AVAX',chain:'avax' },
+  { id:'chainlink',   name:'Chainlink', ticker:'LINK',chain:'eth'  },
+  { id:'uniswap',     name:'Uniswap',   ticker:'UNI', chain:'eth'  },
+  { id:'aave',        name:'Aave',      ticker:'AAVE',chain:'eth'  },
+  { id:'curve-dao-token',name:'Curve',  ticker:'CRV', chain:'eth'  },
+];
 
-            useEffect(() => {
-                if (portfolio.length > 0) {
-                    fetchPrices();
-                    const interval = setInterval(fetchPrices, 60000);
-                    return () => clearInterval(interval);
-                }
-            }, [portfolio]);
+const REEF_BADGES = [
+  { id:'whale',       emoji:'🐋', name:'Whale Trucker',   desc:'Portfolio > $100k',     xp:500,  rarity:'legendary' },
+  { id:'ton-pioneer', emoji:'💎', name:'TON Pioneer',      desc:'First TON wallet added',xp:200,  rarity:'rare' },
+  { id:'multi-chain', emoji:'⛓️',  name:'Chain Surfer',    desc:'5+ chains connected',   xp:300,  rarity:'epic' },
+  { id:'reef-native', emoji:'🪸', name:'Reef Native',      desc:'Identity verified',     xp:150,  rarity:'uncommon' },
+  { id:'splashlog',   emoji:'💧', name:'SPLASHLOG Master', desc:'10+ checkpoints logged',xp:100,  rarity:'common' },
+  { id:'multisig',    emoji:'🔐', name:'Multisig Guardian',desc:'Multisig wallet active', xp:250,  rarity:'epic' },
+  { id:'hodler',      emoji:'💎', name:'Diamond Hands',    desc:'Hold > 30 days',        xp:180,  rarity:'rare' },
+  { id:'notifier',    emoji:'🛰️', name:'Webhook Wizard',   desc:'Webhook configured',    xp:120,  rarity:'uncommon' },
+  { id:'legacy',      emoji:'🏛️', name:'Legacy Keeper',    desc:'scutua01 preserved',    xp:400,  rarity:'legendary' },
+  { id:'defi',        emoji:'⚡', name:'DeFi Ranger',      desc:'Yield tracked',         xp:220,  rarity:'rare' },
+];
 
-            const savePortfolio = (newPortfolio) => {
-                setPortfolio(newPortfolio);
-                localStorage.setItem('cryptotruck-portfolio', JSON.stringify(newPortfolio));
-            };
+const RARITY_COLOR = { common:'badge-blue', uncommon:'badge-green', rare:'badge-blue', epic:'badge-purple', legendary:'badge-yellow' };
 
-            const addCoin = () => {
-                if (newCoin.symbol && newCoin.amount) {
-                    const coin = popularCoins.find(c => c.symbol === newCoin.symbol);
-                    if (coin) {
-                        const updated = [...portfolio, {
-                            id: Date.now(),
-                            symbol: coin.symbol,
-                            name: coin.name,
-                            ticker: coin.ticker,
-                            amount: parseFloat(newCoin.amount),
-                            addedAt: new Date().toISOString()
-                        }];
-                        savePortfolio(updated);
-                        setNewCoin({ symbol: '', amount: '' });
-                        setShowAddModal(false);
-                    }
-                }
-            };
+const SPLASHLOGS = [
+  { id:1, ts:'2024-01-15T08:00:00Z', msg:'🌊 Reef identity established – scutua01 lives',   type:'identity' },
+  { id:2, ts:'2024-02-01T12:00:00Z', msg:'🔐 Multisig migrated Polkadot → TON',              type:'migration' },
+  { id:3, ts:'2024-03-10T09:30:00Z', msg:'🪸 Badge system initialised – reef-ton v1',        type:'badge' },
+  { id:4, ts:'2024-04-05T16:45:00Z', msg:'💎 First TON wallet connected',                    type:'ton' },
+  { id:5, ts:'2024-05-20T11:00:00Z', msg:'⚡ DeFi yields tracker activated',                 type:'defi' },
+  { id:6, ts:'2024-06-14T14:20:00Z', msg:'🛰️ Webhook hub connected – GitHub + Slack + Jira',type:'webhook' },
+  { id:7, ts:'2024-07-01T07:00:00Z', msg:'🐋 WhaleTrucker identity merged into cryptotruck', type:'identity' },
+  { id:8, ts:'2024-08-22T10:10:00Z', msg:'🚀 CryptoTruck v2 Super Boss Mode launched',       type:'launch' },
+];
 
-            const removeCoin = (id) => {
-                const updated = portfolio.filter(p => p.id !== id);
-                savePortfolio(updated);
-            };
+const YIELD_PROTOCOLS = [
+  { id:'curve',    name:'Curve Finance',  emoji:'🔵', apy:8.4,  chain:'eth',  tvl:'$4.2B',  pool:'3Pool'  },
+  { id:'aave',     name:'Aave v3',        emoji:'👻', apy:4.2,  chain:'eth',  tvl:'$11.8B', pool:'USDC'   },
+  { id:'compound', name:'Compound v3',    emoji:'🟢', apy:3.9,  chain:'eth',  tvl:'$2.6B',  pool:'USDT'   },
+  { id:'convex',   name:'Convex Finance', emoji:'🔶', apy:12.1, chain:'eth',  tvl:'$3.1B',  pool:'cvxCRV' },
+  { id:'near',     name:'NEAR Protocol',  emoji:'🟣', apy:9.7,  chain:'sol',  tvl:'$890M',  pool:'NEAR'   },
+  { id:'tonpools', name:'TON Pools',      emoji:'💎', apy:6.8,  chain:'ton',  tvl:'$420M',  pool:'TON'    },
+];
 
-            const calculateTotal = () => {
-                return portfolio.reduce((total, coin) => {
-                    const price = prices[coin.symbol]?.usd || 0;
-                    return total + (coin.amount * price);
-                }, 0);
-            };
+const fmtUSD = (n) => n >= 1e9 ? `$${(n/1e9).toFixed(2)}B` : n >= 1e6 ? `$${(n/1e6).toFixed(2)}M` : n >= 1000 ? `$${n.toLocaleString('en-US',{maximumFractionDigits:2})}` : `$${Number(n).toFixed(n < 1 ? 6 : 2)}`;
+const fmtN   = (n) => Number(n).toLocaleString('en-US',{maximumFractionDigits:6});
+const ago    = (ts) => { const s=(Date.now()-new Date(ts))/1000; if(s<60) return 'just now'; if(s<3600) return `${~~(s/60)}m ago`; if(s<86400) return `${~~(s/3600)}h ago`; return `${~~(s/86400)}d ago`; };
+const truncAddr = (a,n=6) => a ? `${a.slice(0,n)}…${a.slice(-4)}` : '';
 
-            const total = calculateTotal();
+// ─── API helpers ─────────────────────────────────────────────────────────────
+const fetchCGPrices = async (ids) => {
+  if (!ids.length) return {};
+  const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(',')}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true`;
+  const r = await fetch(url);
+  return r.json();
+};
 
+const fetchTONBalance = async (addr) => {
+  try {
+    const r = await fetch(`https://toncenter.com/api/v2/getAddressInformation?address=${addr}`);
+    const d = await r.json();
+    if (d.ok) return parseFloat(d.result.balance) / 1e9;
+    return null;
+  } catch { return null; }
+};
+
+const fetchTONTransactions = async (addr) => {
+  try {
+    const r = await fetch(`https://toncenter.com/api/v2/getTransactions?address=${addr}&limit=5`);
+    const d = await r.json();
+    return d.ok ? d.result : [];
+  } catch { return []; }
+};
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+const TRUSTWALLET_CHAIN = { eth:'ethereum', bsc:'smartchain', pol:'polygon', avax:'avalanche', arb:'arbitrum', sol:'solana', ton:'ton', dot:'polkadot' };
+
+const getExplorerUrl = (chain, address) => {
+  const urls = { eth:`https://etherscan.io/address/${address}`, bsc:`https://bscscan.com/address/${address}`, pol:`https://polygonscan.com/address/${address}`, avax:`https://snowtrace.io/address/${address}`, arb:`https://arbiscan.io/address/${address}`, sol:`https://solscan.io/account/${address}`, ton:`https://tonscan.org/address/${address}`, dot:`https://polkadot.subscan.io/account/${address}` };
+  return urls[chain] || `https://blockscan.com/address/${address}`;
+};
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+const Spinner = ({size=16}) => <span className="spin" style={{display:'inline-block',fontSize:size}}>⟳</span>;
+
+const StatCard = ({emoji, label, value, sub, color='#0ea5e9'}) => (
+  <div className="card" style={{padding:'16px 20px',flex:'1 1 160px',minWidth:0}}>
+    <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between'}}>
+      <div style={{fontSize:26}}>{emoji}</div>
+      <div style={{fontSize:11,color:'#475569',textTransform:'uppercase',letterSpacing:'.5px',marginTop:4}}>{label}</div>
+    </div>
+    <div style={{fontSize:22,fontWeight:800,color,marginTop:8,wordBreak:'break-all'}}>{value}</div>
+    {sub && <div style={{fontSize:12,color:'#64748b',marginTop:4}}>{sub}</div>}
+  </div>
+);
+
+const ChainBadge = ({chain}) => {
+  const c = CHAINS[chain] || {short:chain,color:'#94a3b8',emoji:'🔗'};
+  return <span style={{background:`${c.color}22`,color:c.color,border:`1px solid ${c.color}44`,borderRadius:20,padding:'2px 8px',fontSize:11,fontWeight:700}}>{c.emoji} {c.short}</span>;
+};
+
+// ─── Portfolio Tab ────────────────────────────────────────────────────────────
+const PortfolioTab = ({ portfolio, setPortfolio, prices, setPrices, loading, setLoading }) => {
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({ coinId:'bitcoin', ticker:'BTC', name:'Bitcoin', chain:'eth', amount:'', customId:'' });
+  const [search, setSearch] = useState('');
+  const [filterChain, setFilterChain] = useState('all');
+
+  const refreshPrices = useCallback(async () => {
+    setLoading(true);
+    try {
+      const ids = portfolio.map(p => p.coinId);
+      const all = [...new Set([...ids, ...DEFAULT_COINS.map(c=>c.id)])];
+      const data = await fetchCGPrices(all);
+      setPrices(data);
+    } catch(e) { console.error(e); }
+    setLoading(false);
+  }, [portfolio, setLoading, setPrices]);
+
+  useEffect(() => {
+    refreshPrices();
+    const t = setInterval(refreshPrices, 60000);
+    return () => clearInterval(t);
+  }, [portfolio]);
+
+  const save = (p) => { setPortfolio(p); LS.set('ct-portfolio', p); };
+
+  const addHolding = () => {
+    if (!form.amount || isNaN(parseFloat(form.amount))) return;
+    const effectiveId = form.coinId === 'custom' ? form.customId.trim() : form.coinId;
+    if (!effectiveId) return;
+    const coin = DEFAULT_COINS.find(c=>c.id===effectiveId) || { id:effectiveId, name:form.name||effectiveId, ticker:form.ticker||effectiveId.toUpperCase(), chain:form.chain };
+    save([...portfolio, { id:Date.now(), coinId:coin.id, name:coin.name, ticker:coin.ticker, chain:coin.chain, amount:parseFloat(form.amount), addedAt:new Date().toISOString() }]);
+    setForm({ coinId:'bitcoin', ticker:'BTC', name:'Bitcoin', chain:'eth', amount:'', customId:'' });
+    setShowAdd(false);
+  };
+
+  const remove = (id) => save(portfolio.filter(p=>p.id!==id));
+
+  const selectCoin = (coinId) => {
+    const c = DEFAULT_COINS.find(x=>x.id===coinId);
+    if (c) setForm(f=>({...f, coinId:c.id, name:c.name, ticker:c.ticker, chain:c.chain}));
+    else    setForm(f=>({...f, coinId}));
+  };
+
+  const total = portfolio.reduce((s, p) => s + (p.amount * (prices[p.coinId]?.usd || 0)), 0);
+
+  const filtered = portfolio.filter(p => {
+    const q = search.toLowerCase();
+    const matchQ = !q || p.name.toLowerCase().includes(q) || p.ticker.toLowerCase().includes(q);
+    const matchC = filterChain === 'all' || p.chain === filterChain;
+    return matchQ && matchC;
+  });
+
+  return (
+    <div className="fade-in">
+      {/* Stats row */}
+      <div style={{display:'flex',flexWrap:'wrap',gap:12,marginBottom:20}}>
+        <StatCard emoji="💼" label="Total Value" value={fmtUSD(total)} sub={`${portfolio.length} holdings`} />
+        <StatCard emoji="📈" label="Best 24h" value={(() => { let best=null; portfolio.forEach(p=>{const ch=prices[p.coinId]?.usd_24h_change||0; if(!best||ch>best.ch) best={ch,n:p.ticker};}); return best?`+${best.ch.toFixed(2)}% ${best.n}`:'–'; })()} color="#4ade80" />
+        <StatCard emoji="⛓️" label="Chains" value={[...new Set(portfolio.map(p=>p.chain))].length || '–'} sub="active networks" color="#c084fc" />
+        <StatCard emoji="🔄" label="Auto Refresh" value="60s" sub={loading ? '⟳ updating…' : '✓ live'} color="#fbbf24" />
+      </div>
+
+      {/* Controls */}
+      <div style={{display:'flex',flexWrap:'wrap',gap:10,marginBottom:16,alignItems:'center'}}>
+        <input className="input" style={{flex:'1 1 200px'}} placeholder="🔍 Search holdings…" value={search} onChange={e=>setSearch(e.target.value)} />
+        <select className="input" style={{flex:'0 0 150px'}} value={filterChain} onChange={e=>setFilterChain(e.target.value)}>
+          <option value="all">All Chains</option>
+          {Object.entries(CHAINS).map(([k,v])=><option key={k} value={k}>{v.emoji} {v.name}</option>)}
+        </select>
+        <button className="btn-primary" onClick={()=>setShowAdd(true)} style={{flex:'0 0 auto'}}>+ Add Holding</button>
+        <button className="btn-ghost" onClick={refreshPrices} style={{flex:'0 0 auto'}}>{loading ? <Spinner /> : '🔄'} Refresh</button>
+      </div>
+
+      {/* Holdings table */}
+      <div className="card" style={{overflow:'auto'}}>
+        {filtered.length === 0 ? (
+          <div style={{padding:'48px',textAlign:'center',color:'#475569'}}>
+            <div style={{fontSize:48,marginBottom:12}}>🚚</div>
+            <div style={{fontSize:18,fontWeight:700,marginBottom:6}}>No holdings yet</div>
+            <div style={{fontSize:14}}>Click "Add Holding" to start your portfolio</div>
+          </div>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Asset</th><th>Chain</th><th>Price</th><th>24h</th><th>Holdings</th><th>Value</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(p => {
+                const pr = prices[p.coinId];
+                const price = pr?.usd || 0;
+                const chg = pr?.usd_24h_change || 0;
+                const val = p.amount * price;
+                return (
+                  <tr key={p.id}>
+                    <td>
+                      <div style={{display:'flex',alignItems:'center',gap:10}}>
+                        <img
+                          src={`https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/${TRUSTWALLET_CHAIN[p.chain] || p.chain}/info/logo.png`}
+                          alt="" style={{width:32,height:32,borderRadius:'50%',background:'#1e3a5f'}}
+                          onError={e=>{e.target.style.display='none'}}
+                        />
+                        <div>
+                          <div style={{fontWeight:700,color:'#e2e8f0'}}>{p.ticker}</div>
+                          <div style={{fontSize:12,color:'#64748b'}}>{p.name}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td><ChainBadge chain={p.chain} /></td>
+                    <td style={{fontWeight:600}}>{price ? fmtUSD(price) : <Spinner />}</td>
+                    <td>
+                      <span style={{color: chg >= 0 ? '#4ade80' : '#f87171', fontWeight:600}}>
+                        {chg >= 0 ? '▲' : '▼'} {Math.abs(chg).toFixed(2)}%
+                      </span>
+                    </td>
+                    <td>{fmtN(p.amount)} {p.ticker}</td>
+                    <td style={{fontWeight:700,color:'#38bdf8'}}>{price ? fmtUSD(val) : '–'}</td>
+                    <td><button className="btn-danger" onClick={()=>remove(p.id)} style={{padding:'4px 8px',fontSize:12}}>✕</button></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Add Modal */}
+      {showAdd && (
+        <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowAdd(false)}}>
+          <div className="modal slide-in">
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+              <h2 style={{fontSize:20,fontWeight:800}}>➕ Add Holding</h2>
+              <button className="btn-ghost" onClick={()=>setShowAdd(false)}>✕</button>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:14}}>
+              <div>
+                <label style={{fontSize:12,color:'#94a3b8',marginBottom:6,display:'block'}}>Select Coin</label>
+                <select className="input" value={form.coinId} onChange={e=>selectCoin(e.target.value)}>
+                  {DEFAULT_COINS.map(c=><option key={c.id} value={c.id}>{c.ticker} – {c.name}</option>)}
+                  <option value="custom">✏️ Custom…</option>
+                </select>
+              </div>
+              {form.coinId === 'custom' && (
+                <>
+                  <div>
+                    <label style={{fontSize:12,color:'#94a3b8',marginBottom:6,display:'block'}}>CoinGecko ID</label>
+                    <input className="input" placeholder="e.g. uniswap" value={form.customId} onChange={e=>setForm(f=>({...f,customId:e.target.value}))} />
+                  </div>
+                  <div style={{display:'flex',gap:10}}>
+                    <div style={{flex:1}}>
+                      <label style={{fontSize:12,color:'#94a3b8',marginBottom:6,display:'block'}}>Ticker</label>
+                      <input className="input" placeholder="e.g. UNI" value={form.ticker} onChange={e=>setForm(f=>({...f,ticker:e.target.value.toUpperCase()}))} />
+                    </div>
+                    <div style={{flex:1}}>
+                      <label style={{fontSize:12,color:'#94a3b8',marginBottom:6,display:'block'}}>Name</label>
+                      <input className="input" placeholder="e.g. Uniswap" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{fontSize:12,color:'#94a3b8',marginBottom:6,display:'block'}}>Chain</label>
+                    <select className="input" value={form.chain} onChange={e=>setForm(f=>({...f,chain:e.target.value}))}>
+                      {Object.entries(CHAINS).map(([k,v])=><option key={k} value={k}>{v.emoji} {v.name}</option>)}
+                    </select>
+                  </div>
+                </>
+              )}
+              <div>
+                <label style={{fontSize:12,color:'#94a3b8',marginBottom:6,display:'block'}}>Amount</label>
+                <input className="input" type="number" placeholder="0.00" min="0" step="any" value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))} />
+              </div>
+              {form.coinId && form.coinId !== 'custom' && prices[form.coinId] && (
+                <div style={{background:'rgba(14,165,233,.1)',border:'1px solid rgba(14,165,233,.3)',borderRadius:8,padding:12,fontSize:13}}>
+                  💡 Current price: <strong>{fmtUSD(prices[form.coinId].usd)}</strong>
+                  {form.amount && !isNaN(parseFloat(form.amount)) && (
+                    <span> → Value: <strong style={{color:'#38bdf8'}}>{fmtUSD(parseFloat(form.amount)*prices[form.coinId].usd)}</strong></span>
+                  )}
+                </div>
+              )}
+              <button className="btn-primary" onClick={addHolding} style={{marginTop:4}}>Add to Portfolio</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Wallets Tab ──────────────────────────────────────────────────────────────
+const WalletsTab = ({ wallets, setWallets, addNotification }) => {
+  const [showAdd, setShowAdd]   = useState(false);
+  const [form, setForm]         = useState({ label:'', address:'', chain:'eth', type:'standard' });
+  const [balances, setBalances] = useState({});
+  const [loadingW, setLoadingW] = useState({});
+  const [txs, setTxs]           = useState({});
+
+  const save = (w) => { setWallets(w); LS.set('ct-wallets', w); };
+
+  const addWallet = () => {
+    if (!form.address.trim()) return;
+    const w = { id:Date.now(), label:form.label||truncAddr(form.address), address:form.address.trim(), chain:form.chain, type:form.type, addedAt:new Date().toISOString() };
+    save([...wallets, w]);
+    if (form.chain === 'ton') fetchTONData(w);
+    addNotification({ type:'wallet', msg:`🔗 Wallet added: ${form.label||truncAddr(form.address)} on ${CHAINS[form.chain]?.name}` });
+    setForm({ label:'', address:'', chain:'eth', type:'standard' });
+    setShowAdd(false);
+  };
+
+  const remove = (id) => { save(wallets.filter(w=>w.id!==id)); };
+
+  const fetchTONData = async (w) => {
+    setLoadingW(l=>({...l,[w.id]:true}));
+    const bal = await fetchTONBalance(w.address);
+    if (bal !== null) setBalances(b=>({...b,[w.id]:bal}));
+    const tx = await fetchTONTransactions(w.address);
+    if (tx.length) setTxs(t=>({...t,[w.id]:tx}));
+    setLoadingW(l=>({...l,[w.id]:false}));
+  };
+
+  useEffect(() => {
+    wallets.filter(w=>w.chain==='ton').forEach(fetchTONData);
+  }, []);
+
+  const totalTON = wallets.filter(w=>w.chain==='ton').reduce((s,w)=>s+(balances[w.id]||0),0);
+  const multisigWallets = wallets.filter(w=>w.type==='multisig');
+
+  return (
+    <div className="fade-in">
+      {/* Stats */}
+      <div style={{display:'flex',flexWrap:'wrap',gap:12,marginBottom:20}}>
+        <StatCard emoji="🔑" label="Total Wallets" value={wallets.length} sub="across all chains" />
+        <StatCard emoji="💎" label="TON Balance" value={`${totalTON.toFixed(4)} TON`} sub={`${wallets.filter(w=>w.chain==='ton').length} TON wallets`} color='#0098ea' />
+        <StatCard emoji="🔐" label="Multisig" value={multisigWallets.length} sub="active multisigs" color='#c084fc' />
+        <StatCard emoji="⛓️" label="Networks" value={[...new Set(wallets.map(w=>w.chain))].length} sub="connected" color='#2dd4bf' />
+      </div>
+
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16,flexWrap:'wrap',gap:10}}>
+        <h3 style={{fontWeight:700,fontSize:16}}>💼 Connected Wallets</h3>
+        <button className="btn-primary" onClick={()=>setShowAdd(true)}>+ Add Wallet</button>
+      </div>
+
+      {wallets.length === 0 ? (
+        <div className="card" style={{padding:'48px',textAlign:'center',color:'#475569'}}>
+          <div style={{fontSize:48,marginBottom:12}}>🔑</div>
+          <div style={{fontSize:18,fontWeight:700,marginBottom:6}}>No wallets connected</div>
+          <div style={{fontSize:14,marginBottom:20}}>Add your EVM or TON wallet addresses to track balances</div>
+          <button className="btn-primary" onClick={()=>setShowAdd(true)}>+ Connect First Wallet</button>
+        </div>
+      ) : (
+        <div style={{display:'flex',flexDirection:'column',gap:12}}>
+          {wallets.map(w => {
+            const chain = CHAINS[w.chain] || {name:w.chain,emoji:'🔗',color:'#94a3b8'};
+            const bal = balances[w.id];
+            const wTxs = txs[w.id] || [];
             return (
-                <div style={{minHeight: '100vh', background: 'linear-gradient(to bottom right, #1a1a2e, #16213e, #0f3460)'}}>
-                    {/* Header */}
-                    <div style={{background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(255,255,255,0.1)'}}>
-                        <div style={{maxWidth: '1200px', margin: '0 auto', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px'}}>
-                            <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
-                                <div style={{background: 'linear-gradient(to right, #f59e0b, #ef4444)', padding: '8px', borderRadius: '8px', fontSize: '24px'}}>
-                                    <Truck />
-                                </div>
-                                <div>
-                                    <h1 style={{fontSize: '24px', fontWeight: 'bold', color: 'white'}}>CryptoTruck</h1>
-                                    <p style={{fontSize: '14px', color: '#9ca3af'}}>Trucking to the Moon 🚀</p>
-                                </div>
+              <div key={w.id} className="card" style={{padding:16}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:10}}>
+                  <div style={{display:'flex',alignItems:'center',gap:12}}>
+                    <div style={{width:44,height:44,borderRadius:10,background:`${chain.color}22`,border:`2px solid ${chain.color}44`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22}}>
+                      {chain.emoji}
+                    </div>
+                    <div>
+                      <div style={{fontWeight:700,fontSize:15,color:'#e2e8f0'}}>{w.label}</div>
+                      <div style={{fontFamily:'monospace',fontSize:12,color:'#64748b',marginTop:2}}>{truncAddr(w.address,8)}</div>
+                      <div style={{display:'flex',gap:6,marginTop:6,flexWrap:'wrap'}}>
+                        <ChainBadge chain={w.chain} />
+                        <span className={`badge ${w.type==='multisig'?'badge-purple':w.type==='proxy'?'badge-coral':'badge-teal'}`}>
+                          {w.type === 'multisig' ? '🔐 Multisig' : w.type === 'proxy' ? '🔀 Proxy' : '👤 Standard'}
+                        </span>
+                        {w.type==='multisig' && <span className="badge badge-yellow">⚡ Polkadot→TON</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:8}}>
+                    {w.chain === 'ton' && (
+                      <div style={{textAlign:'right'}}>
+                        {loadingW[w.id] ? <Spinner /> : (
+                          <div>
+                            <div style={{fontSize:20,fontWeight:800,color:'#0098ea'}}>
+                              {bal !== undefined ? `${bal.toFixed(4)} TON` : '–'}
+                            </div>
+                            <button className="btn-ghost" style={{fontSize:11,marginTop:4,padding:'3px 8px'}} onClick={()=>fetchTONData(w)}>🔄 Refresh</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <div style={{display:'flex',gap:6}}>
+                      <a href={getExplorerUrl(w.chain, w.address)} target="_blank" rel="noopener noreferrer">
+                        <button className="btn-ghost" style={{fontSize:11,padding:'4px 8px'}}>🔗 Explorer</button>
+                      </a>
+                      <button className="btn-danger" onClick={()=>remove(w.id)} style={{fontSize:11,padding:'4px 8px'}}>✕</button>
+                    </div>
+                  </div>
+                </div>
+                {/* Recent TON transactions */}
+                {wTxs.length > 0 && (
+                  <div style={{marginTop:12,borderTop:'1px solid rgba(30,58,95,.5)',paddingTop:12}}>
+                    <div style={{fontSize:12,color:'#64748b',marginBottom:8,fontWeight:600}}>📋 Recent Transactions</div>
+                    {wTxs.slice(0,3).map((tx,i)=>(
+                      <div key={i} style={{display:'flex',justifyContent:'space-between',fontSize:12,padding:'4px 0',color:'#94a3b8'}}>
+                        <span>⟳ {truncAddr(tx.transaction_id?.hash||'',8)}</span>
+                        <span>{tx.utime ? ago(new Date(tx.utime*1000).toISOString()) : '–'}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Multisig section */}
+      {multisigWallets.length > 0 && (
+        <div style={{marginTop:24}}>
+          <h3 style={{fontWeight:700,fontSize:16,marginBottom:12}}>🔐 Multisig Orchestration</h3>
+          <div className="card" style={{padding:16}}>
+            <div style={{display:'flex',flexWrap:'wrap',gap:16}}>
+              {multisigWallets.map(w=>(
+                <div key={w.id} style={{flex:'1 1 220px',background:'rgba(168,85,247,.08)',border:'1px solid rgba(168,85,247,.3)',borderRadius:10,padding:14}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
+                    <span style={{fontSize:20}}>🔐</span>
+                    <div>
+                      <div style={{fontWeight:700,color:'#e2e8f0'}}>{w.label}</div>
+                      <div style={{fontSize:11,color:'#94a3b8'}}>{truncAddr(w.address,8)}</div>
+                    </div>
+                  </div>
+                  <div style={{display:'flex',flexDirection:'column',gap:6,fontSize:12}}>
+                    <div style={{display:'flex',justifyContent:'space-between'}}>
+                      <span style={{color:'#64748b'}}>Chain</span>
+                      <ChainBadge chain={w.chain} />
+                    </div>
+                    <div style={{display:'flex',justifyContent:'space-between'}}>
+                      <span style={{color:'#64748b'}}>Type</span>
+                      <span className="badge badge-purple">Multisig</span>
+                    </div>
+                    <div style={{display:'flex',justifyContent:'space-between'}}>
+                      <span style={{color:'#64748b'}}>Migration</span>
+                      <span className="badge badge-yellow">DOT → TON</span>
+                    </div>
+                    {balances[w.id] !== undefined && (
+                      <div style={{display:'flex',justifyContent:'space-between'}}>
+                        <span style={{color:'#64748b'}}>Balance</span>
+                        <strong style={{color:'#0098ea'}}>{balances[w.id].toFixed(4)} TON</strong>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Wallet Modal */}
+      {showAdd && (
+        <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowAdd(false)}}>
+          <div className="modal slide-in">
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+              <h2 style={{fontSize:20,fontWeight:800}}>🔑 Add Wallet</h2>
+              <button className="btn-ghost" onClick={()=>setShowAdd(false)}>✕</button>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:14}}>
+              <div>
+                <label style={{fontSize:12,color:'#94a3b8',marginBottom:6,display:'block'}}>Chain</label>
+                <select className="input" value={form.chain} onChange={e=>setForm(f=>({...f,chain:e.target.value}))}>
+                  {Object.entries(CHAINS).map(([k,v])=><option key={k} value={k}>{v.emoji} {v.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{fontSize:12,color:'#94a3b8',marginBottom:6,display:'block'}}>Wallet Address</label>
+                <input className="input" placeholder={form.chain==='ton' ? 'EQA…or UQ…' : '0x…'} value={form.address} onChange={e=>setForm(f=>({...f,address:e.target.value}))} />
+              </div>
+              <div>
+                <label style={{fontSize:12,color:'#94a3b8',marginBottom:6,display:'block'}}>Label (optional)</label>
+                <input className="input" placeholder="e.g. Main Wallet" value={form.label} onChange={e=>setForm(f=>({...f,label:e.target.value}))} />
+              </div>
+              <div>
+                <label style={{fontSize:12,color:'#94a3b8',marginBottom:6,display:'block'}}>Wallet Type</label>
+                <select className="input" value={form.type} onChange={e=>setForm(f=>({...f,type:e.target.value}))}>
+                  <option value="standard">👤 Standard</option>
+                  <option value="multisig">🔐 Multisig (Polkadot→TON)</option>
+                  <option value="proxy">🔀 Proxy</option>
+                </select>
+              </div>
+              {form.chain === 'ton' && (
+                <div style={{background:'rgba(0,152,234,.1)',border:'1px solid rgba(0,152,234,.3)',borderRadius:8,padding:12,fontSize:13}}>
+                  💎 TON wallets will have their balance auto-fetched from TON Center API
+                </div>
+              )}
+              {form.type === 'multisig' && (
+                <div style={{background:'rgba(168,85,247,.1)',border:'1px solid rgba(168,85,247,.3)',borderRadius:8,padding:12,fontSize:13}}>
+                  🔐 Multisig wallets support Polkadot → TON migration tracking with proxy type translation
+                </div>
+              )}
+              <button className="btn-primary" onClick={addWallet}>Add Wallet</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── TON Hub Tab ──────────────────────────────────────────────────────────────
+const TONHubTab = ({ wallets, prices }) => {
+  const [tonAddr, setTonAddr]     = useState('');
+  const [tonBal, setTonBal]       = useState(null);
+  const [tonLoading, setTonLoading] = useState(false);
+  const [tonTxs, setTonTxs]       = useState([]);
+  const [tonErr, setTonErr]       = useState('');
+
+  const tonWallets = wallets.filter(w=>w.chain==='ton');
+  const tonPrice   = prices['the-open-network']?.usd || 0;
+  const ton24h     = prices['the-open-network']?.usd_24h_change || 0;
+
+  const fetchAddr = async () => {
+    if (!tonAddr.trim()) return;
+    setTonLoading(true); setTonErr('');
+    const bal = await fetchTONBalance(tonAddr);
+    const txList = await fetchTONTransactions(tonAddr);
+    if (bal === null) { setTonErr('Could not fetch balance. Check address or try later.'); }
+    else { setTonBal(bal); setTonTxs(txList); }
+    setTonLoading(false);
+  };
+
+  const tonTokens = [
+    { name:'Toncoin',  ticker:'TON',    emoji:'💎', mcap:'$14.2B', supply:'5.1B' },
+    { name:'USDT',     ticker:'USDT',   emoji:'💚', mcap:'$83B',   supply:'–'    },
+    { name:'NOT',      ticker:'NOT',    emoji:'🫧', mcap:'$620M',  supply:'102B' },
+    { name:'DOGS',     ticker:'DOGS',   emoji:'🐕', mcap:'$180M',  supply:'550B' },
+    { name:'SCALE',    ticker:'SCALE',  emoji:'⚖️', mcap:'$48M',   supply:'10B'  },
+    { name:'STON',     ticker:'STON',   emoji:'🟣', mcap:'$34M',   supply:'100M' },
+    { name:'MEGA',     ticker:'MEGA',   emoji:'🔷', mcap:'$12M',   supply:'1B'   },
+    { name:'DFC',      ticker:'DFC',    emoji:'🏦', mcap:'$9M',    supply:'21M'  },
+  ];
+
+  return (
+    <div className="fade-in">
+      {/* TON Price Banner */}
+      <div className="card glow" style={{padding:20,marginBottom:20,background:'linear-gradient(135deg,rgba(0,152,234,.15),rgba(0,152,234,.05))'}}>
+        <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
+          <div style={{fontSize:48}}>💎</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:13,color:'#64748b',marginBottom:4}}>TON · The Open Network</div>
+            <div style={{fontSize:32,fontWeight:800,color:'#38bdf8'}}>{tonPrice ? fmtUSD(tonPrice) : '…'}</div>
+            <div style={{fontSize:14,color: ton24h>=0?'#4ade80':'#f87171',marginTop:4,fontWeight:600}}>
+              {ton24h>=0?'▲':'▼'} {Math.abs(ton24h).toFixed(2)}% (24h)
+            </div>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:8,textAlign:'right'}}>
+            <div><span className="badge badge-blue">TON Blockchain</span></div>
+            <div style={{fontSize:12,color:'#64748b'}}>Connected wallets: {tonWallets.length}</div>
+            <a href="https://tonscan.org" target="_blank" rel="noopener noreferrer">
+              <button className="btn-ghost" style={{fontSize:12,padding:'4px 10px'}}>🔗 TONScan</button>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* Balance Lookup */}
+      <div className="card" style={{padding:20,marginBottom:20}}>
+        <h3 style={{fontWeight:700,marginBottom:14}}>🔍 TON Wallet Lookup</h3>
+        <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+          <input className="input" style={{flex:'1 1 260px'}} placeholder="Enter TON address (EQA… or UQ…)" value={tonAddr} onChange={e=>setTonAddr(e.target.value)} onKeyDown={e=>e.key==='Enter'&&fetchAddr()} />
+          <button className="btn-primary" onClick={fetchAddr} style={{flex:'0 0 auto'}}>{tonLoading?<Spinner />:'🔍 Check'}</button>
+        </div>
+        {tonErr && <div style={{marginTop:10,padding:'10px 14px',background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,fontSize:13,color:'#f87171'}}>{tonErr}</div>}
+        {tonBal !== null && !tonErr && (
+          <div style={{marginTop:14,background:'rgba(0,152,234,.08)',border:'1px solid rgba(0,152,234,.3)',borderRadius:10,padding:16}}>
+            <div style={{display:'flex',justifyContent:'space-between',flexWrap:'wrap',gap:10}}>
+              <div>
+                <div style={{fontSize:13,color:'#64748b'}}>Balance</div>
+                <div style={{fontSize:28,fontWeight:800,color:'#0098ea'}}>{tonBal.toFixed(4)} TON</div>
+                {tonPrice>0 && <div style={{fontSize:14,color:'#94a3b8',marginTop:4}}>{fmtUSD(tonBal*tonPrice)}</div>}
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:6,fontSize:13}}>
+                <a href={`https://tonscan.org/address/${tonAddr}`} target="_blank" rel="noopener noreferrer">
+                  <button className="btn-ghost" style={{fontSize:12}}>🔗 View on TONScan</button>
+                </a>
+              </div>
+            </div>
+            {tonTxs.length>0 && (
+              <div style={{marginTop:14}}>
+                <div style={{fontSize:12,color:'#64748b',marginBottom:8,fontWeight:600}}>📋 Recent Transactions ({tonTxs.length})</div>
+                {tonTxs.map((tx,i)=>(
+                  <div key={i} style={{display:'flex',justifyContent:'space-between',padding:'6px 0',borderTop:'1px solid rgba(30,58,95,.4)',fontSize:12,color:'#94a3b8'}}>
+                    <span>⟳ {truncAddr(tx.transaction_id?.hash||'–',10)}</span>
+                    <span>{tx.utime ? ago(new Date(tx.utime*1000).toISOString()) : '–'}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Connected TON Wallets */}
+      {tonWallets.length>0 && (
+        <div style={{marginBottom:20}}>
+          <h3 style={{fontWeight:700,marginBottom:12}}>💼 My TON Wallets</h3>
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            {tonWallets.map(w=>(
+              <div key={w.id} className="card" style={{padding:14,display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}}>
+                <div>
+                  <div style={{fontWeight:700,color:'#e2e8f0'}}>{w.label}</div>
+                  <div style={{fontFamily:'monospace',fontSize:12,color:'#64748b',marginTop:2}}>{truncAddr(w.address,10)}</div>
+                </div>
+                <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                  <span className={`badge ${w.type==='multisig'?'badge-purple':'badge-teal'}`}>{w.type==='multisig'?'🔐 Multisig':'👤 Standard'}</span>
+                  <a href={`https://tonscan.org/address/${w.address}`} target="_blank" rel="noopener noreferrer">
+                    <button className="btn-ghost" style={{fontSize:11,padding:'3px 8px'}}>🔗</button>
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TON Token Ecosystem */}
+      <div>
+        <h3 style={{fontWeight:700,marginBottom:12}}>🌊 TON Ecosystem Tokens</h3>
+        <div className="card" style={{overflow:'auto'}}>
+          <table>
+            <thead>
+              <tr><th>Token</th><th>Market Cap</th><th>Supply</th><th>Links</th></tr>
+            </thead>
+            <tbody>
+              {tonTokens.map(t=>(
+                <tr key={t.ticker}>
+                  <td>
+                    <div style={{display:'flex',alignItems:'center',gap:10}}>
+                      <span style={{fontSize:22}}>{t.emoji}</span>
+                      <div>
+                        <div style={{fontWeight:700}}>{t.ticker}</div>
+                        <div style={{fontSize:12,color:'#64748b'}}>{t.name}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{fontWeight:600,color:'#38bdf8'}}>{t.mcap}</td>
+                  <td style={{color:'#94a3b8'}}>{t.supply}</td>
+                  <td>
+                    <a href={`https://tonscan.org/jetton/${t.ticker.toLowerCase()}`} target="_blank" rel="noopener noreferrer">
+                      <button className="btn-ghost" style={{fontSize:11,padding:'3px 8px'}}>🔗</button>
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Badges Tab ───────────────────────────────────────────────────────────────
+const BadgesTab = ({ portfolio, wallets, notifications, splashlogs, setSplashlogs }) => {
+  const [mintTarget, setMintTarget]   = useState(null);
+  const [newLog, setNewLog]           = useState('');
+  const [showLogForm, setShowLogForm] = useState(false);
+
+  // Compute earned badges
+  const earned = new Set();
+  if (LS.get('ct-identity',null)) earned.add('reef-native');
+  if (wallets.some(w=>w.chain==='ton')) earned.add('ton-pioneer');
+  if ([...new Set(wallets.map(w=>w.chain))].length>=5) earned.add('multi-chain');
+  if (wallets.some(w=>w.type==='multisig')) earned.add('multisig');
+  if (splashlogs.length>=10) earned.add('splashlog');
+  if (LS.get('ct-webhooks',[]).length>0) earned.add('notifier');
+  if (LS.get('ct-identity',null)) earned.add('legacy');
+  if (LS.get('ct-yields-tracked',false)) earned.add('defi');
+  // hodler – check if any holding >30 days
+  if (portfolio.some(p=>p.addedAt && (Date.now()-new Date(p.addedAt))>30*86400000)) earned.add('hodler');
+
+  const totalXP = REEF_BADGES.filter(b=>earned.has(b.id)).reduce((s,b)=>s+b.xp,0);
+  const level   = Math.floor(totalXP/200)+1;
+
+  const addSplashlog = () => {
+    if (!newLog.trim()) return;
+    const entry = { id:Date.now(), ts:new Date().toISOString(), msg:newLog.trim(), type:'manual' };
+    const updated = [...splashlogs, entry];
+    setSplashlogs(updated);
+    LS.set('ct-splashlogs', updated);
+    setNewLog('');
+    setShowLogForm(false);
+  };
+
+  return (
+    <div className="fade-in">
+      {/* Level card */}
+      <div className="card" style={{padding:20,marginBottom:20,background:'linear-gradient(135deg,rgba(168,85,247,.15),rgba(168,85,247,.05))'}}>
+        <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
+          <div style={{width:64,height:64,borderRadius:'50%',background:'linear-gradient(135deg,#a855f7,#7c3aed)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,flexShrink:0}}>
+            🏆
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:13,color:'#94a3b8'}}>Reef Rank</div>
+            <div style={{fontSize:28,fontWeight:800,color:'#c084fc'}}>Level {level} WhaleTrucker</div>
+            <div style={{fontSize:13,color:'#64748b',marginTop:4}}>{totalXP} XP · {earned.size}/{REEF_BADGES.length} badges earned</div>
+            <div className="progress" style={{marginTop:8,maxWidth:300}}>
+              <div className="progress-bar" style={{width:`${((totalXP%200)/200)*100}%`,background:'linear-gradient(90deg,#a855f7,#c084fc)'}} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Badge grid */}
+      <h3 style={{fontWeight:700,fontSize:16,marginBottom:12}}>🎖️ Achievement Badges</h3>
+      <div style={{display:'flex',flexWrap:'wrap',gap:12,marginBottom:24}}>
+        {REEF_BADGES.map(b=>{
+          const isEarned = earned.has(b.id);
+          return (
+            <div key={b.id} className="card" style={{flex:'1 1 180px',padding:16,opacity:isEarned?1:0.5,position:'relative',transition:'all .2s',cursor:isEarned?'default':'pointer'}}
+              onClick={()=>!isEarned&&setMintTarget(b)}>
+              {isEarned && <div style={{position:'absolute',top:8,right:8,fontSize:12}}>✅</div>}
+              {!isEarned && <div style={{position:'absolute',top:8,right:8,fontSize:12,color:'#475569'}}>🔒</div>}
+              <div style={{fontSize:32,marginBottom:8}}>{b.emoji}</div>
+              <div style={{fontWeight:700,fontSize:14,color:'#e2e8f0',marginBottom:4}}>{b.name}</div>
+              <div style={{fontSize:12,color:'#64748b',marginBottom:8}}>{b.desc}</div>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span className={`badge ${RARITY_COLOR[b.rarity]}`}>{b.rarity}</span>
+                <span style={{fontSize:12,color:'#fbbf24',fontWeight:700}}>+{b.xp} XP</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* SPLASHLOG */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,flexWrap:'wrap',gap:10}}>
+        <h3 style={{fontWeight:700,fontSize:16}}>💧 SPLASHLOG Checkpoints</h3>
+        <button className="btn-primary" onClick={()=>setShowLogForm(true)} style={{fontSize:13}}>+ Add Checkpoint</button>
+      </div>
+      <div className="card" style={{padding:0,overflow:'hidden'}}>
+        {splashlogs.map((log,i)=>(
+          <div key={log.id} style={{padding:'12px 16px',borderBottom: i<splashlogs.length-1?'1px solid rgba(30,58,95,.4)':'none',display:'flex',gap:12,alignItems:'flex-start'}}>
+            <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(14,165,233,.2)',border:'1px solid rgba(14,165,233,.4)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,flexShrink:0}}>{i+1}</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:14,color:'#e2e8f0'}}>{log.msg}</div>
+              <div style={{fontSize:11,color:'#475569',marginTop:4}}>
+                {new Date(log.ts).toLocaleDateString()} · <span className={`badge badge-${log.type==='identity'?'coral':log.type==='ton'?'blue':log.type==='badge'?'purple':log.type==='launch'?'yellow':'teal'}`} style={{fontSize:10}}>{log.type}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Mint Modal */}
+      {mintTarget && (
+        <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setMintTarget(null)}}>
+          <div className="modal slide-in" style={{maxWidth:380}}>
+            <div style={{textAlign:'center',padding:'8px 0 20px'}}>
+              <div style={{fontSize:56,marginBottom:12}}>{mintTarget.emoji}</div>
+              <h2 style={{fontSize:20,fontWeight:800,marginBottom:8}}>{mintTarget.name}</h2>
+              <div style={{fontSize:14,color:'#64748b',marginBottom:12}}>{mintTarget.desc}</div>
+              <span className={`badge ${RARITY_COLOR[mintTarget.rarity]}`} style={{fontSize:13,padding:'4px 14px'}}>{mintTarget.rarity} · +{mintTarget.xp} XP</span>
+            </div>
+            <div style={{background:'rgba(14,165,233,.08)',border:'1px solid rgba(14,165,233,.3)',borderRadius:8,padding:14,marginBottom:16,fontSize:13,color:'#94a3b8'}}>
+              🔒 This badge is locked. Complete the requirement: <strong style={{color:'#e2e8f0'}}>{mintTarget.desc}</strong>
+            </div>
+            <button className="btn-ghost" onClick={()=>setMintTarget(null)} style={{width:'100%'}}>Close</button>
+          </div>
+        </div>
+      )}
+
+      {/* Add Log Modal */}
+      {showLogForm && (
+        <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowLogForm(false)}}>
+          <div className="modal slide-in" style={{maxWidth:420}}>
+            <h2 style={{fontSize:18,fontWeight:800,marginBottom:16}}>💧 Add SPLASHLOG Entry</h2>
+            <textarea className="input" rows={3} placeholder="Describe this checkpoint…" value={newLog} onChange={e=>setNewLog(e.target.value)} style={{resize:'vertical'}} />
+            <button className="btn-primary" onClick={addSplashlog} style={{width:'100%',marginTop:12}}>Log Checkpoint</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Notifications Tab ────────────────────────────────────────────────────────
+const NotificationsTab = ({ notifications, setNotifications, prices, portfolio }) => {
+  const [webhookUrl, setWebhookUrl] = useState(LS.get('ct-webhook-url',''));
+  const [webhookSaved, setWebhookSaved] = useState(false);
+  const [showWebhookForm, setShowWebhookForm] = useState(false);
+
+  const saveWebhook = () => {
+    LS.set('ct-webhook-url', webhookUrl);
+    LS.set('ct-webhooks', webhookUrl ? [webhookUrl] : []);
+    setWebhookSaved(true);
+    setTimeout(()=>setWebhookSaved(false), 2000);
+  };
+
+  const clearAll = () => { setNotifications([]); LS.set('ct-notifications', []); };
+
+  const typeIcon = (t) => ({ wallet:'��', price:'📈', badge:'🏆', multisig:'🔐', info:'💡', launch:'🚀', error:'❌' }[t] || '🔔');
+  const typeClass = (t) => ({ wallet:'badge-teal', price:'badge-green', badge:'badge-yellow', multisig:'badge-purple', error:'badge-red' }[t] || 'badge-blue');
+
+  // Price alert monitor
+  useEffect(() => {
+    portfolio.forEach(p => {
+      const chg = prices[p.coinId]?.usd_24h_change;
+      if (chg && Math.abs(chg) >= 5) {
+        const key = `alert-${p.coinId}-${new Date().toDateString()}`;
+        if (!LS.get(key, false)) {
+          setNotifications(prev => {
+            const n = { id:Date.now()+Math.random(), type:'price', msg:`📈 ${p.ticker} ${chg>=0?'up':'down'} ${Math.abs(chg).toFixed(1)}% in 24h!`, ts:new Date().toISOString() };
+            const updated = [n, ...prev].slice(0,50);
+            LS.set('ct-notifications', updated);
+            return updated;
+          });
+          LS.set(key, true);
+        }
+      }
+    });
+  }, [prices]);
+
+  return (
+    <div className="fade-in">
+      {/* Webhook config */}
+      <div className="card" style={{padding:16,marginBottom:20}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}}>
+          <div>
+            <div style={{fontWeight:700,marginBottom:4}}>🛰️ Webhook Hub</div>
+            <div style={{fontSize:13,color:'#64748b'}}>Connect Slack, Discord, or any webhook URL for real-time alerts</div>
+          </div>
+          <button className="btn-ghost" onClick={()=>setShowWebhookForm(f=>!f)}>{showWebhookForm?'✕ Close':'⚙️ Configure'}</button>
+        </div>
+        {showWebhookForm && (
+          <div style={{marginTop:14,display:'flex',flexDirection:'column',gap:10}}>
+            <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+              <input className="input" style={{flex:'1 1 260px'}} placeholder="https://hooks.slack.com/… or Discord webhook" value={webhookUrl} onChange={e=>setWebhookUrl(e.target.value)} />
+              <button className="btn-primary" onClick={saveWebhook} style={{flex:'0 0 auto'}}>{webhookSaved?'✅ Saved!':'💾 Save'}</button>
+            </div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+              {['Slack','Discord','Jira','GitHub'].map(s=>(
+                <span key={s} className="badge badge-blue">{s === 'Slack'?'💬':s==='Discord'?'🟣':s==='Jira'?'📋':'🐙'} {s} Ready</span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Notifications feed */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,flexWrap:'wrap',gap:10}}>
+        <h3 style={{fontWeight:700}}>🔔 Notification Feed <span style={{fontSize:13,color:'#64748b',fontWeight:400}}>({notifications.length} total)</span></h3>
+        {notifications.length>0 && <button className="btn-ghost" onClick={clearAll} style={{fontSize:12}}>🗑️ Clear All</button>}
+      </div>
+
+      {notifications.length === 0 ? (
+        <div className="card" style={{padding:'48px',textAlign:'center',color:'#475569'}}>
+          <div style={{fontSize:48,marginBottom:12}}>🛰️</div>
+          <div style={{fontSize:18,fontWeight:700,marginBottom:6}}>No notifications yet</div>
+          <div style={{fontSize:14}}>Alerts will appear here for price changes, badge unlocks, wallet events, and more</div>
+        </div>
+      ) : (
+        <div className="card" style={{padding:0,overflow:'hidden'}}>
+          {notifications.map((n,i)=>(
+            <div key={n.id} style={{padding:'12px 16px',borderBottom:i<notifications.length-1?'1px solid rgba(30,58,95,.4)':'none',display:'flex',gap:12,alignItems:'flex-start',animation: i===0?'slideIn .3s ease-out':'none'}}>
+              <div style={{fontSize:20,marginTop:2}}>{typeIcon(n.type)}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:14,color:'#e2e8f0'}}>{n.msg}</div>
+                <div style={{fontSize:11,color:'#475569',marginTop:4,display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+                  <span>{ago(n.ts)}</span>
+                  <span className={`badge ${typeClass(n.type)}`} style={{fontSize:10}}>{n.type}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Alert types legend */}
+      <div style={{marginTop:20}}>
+        <h3 style={{fontWeight:700,marginBottom:12,fontSize:15}}>⚡ Alert Types</h3>
+        <div style={{display:'flex',flexWrap:'wrap',gap:10}}>
+          {[
+            {t:'price',    l:'Price Change (>5%)',     e:'📈'},
+            {t:'badge',    l:'Badge Unlocked',          e:'🏆'},
+            {t:'wallet',   l:'Wallet Event',            e:'🔑'},
+            {t:'multisig', l:'Multisig Transaction',    e:'🔐'},
+            {t:'launch',   l:'System Event',            e:'🚀'},
+          ].map(a=>(
+            <div key={a.t} className="card" style={{flex:'1 1 160px',padding:'10px 14px',display:'flex',gap:8,alignItems:'center'}}>
+              <span style={{fontSize:20}}>{a.e}</span>
+              <div>
+                <span className={`badge ${typeClass(a.t)}`} style={{fontSize:10}}>{a.t}</span>
+                <div style={{fontSize:12,color:'#64748b',marginTop:4}}>{a.l}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Yields Tab ───────────────────────────────────────────────────────────────
+const YieldsTab = () => {
+  useEffect(() => { LS.set('ct-yields-tracked', true); }, []);
+  const totalTVL = '$26.5B';
+
+  return (
+    <div className="fade-in">
+      <div style={{display:'flex',flexWrap:'wrap',gap:12,marginBottom:20}}>
+        <StatCard emoji="⚡" label="Total TVL" value={totalTVL} sub="across protocols" color='#fbbf24' />
+        <StatCard emoji="📊" label="Best APY" value="12.1%" sub="Convex Finance" color='#4ade80' />
+        <StatCard emoji="🔗" label="Protocols" value={YIELD_PROTOCOLS.length} sub="tracked" />
+        <StatCard emoji="🌊" label="Reef Yields" value="Active" sub="TON + ETH pools" color='#2dd4bf' />
+      </div>
+      <h3 style={{fontWeight:700,marginBottom:12}}>🌾 DeFi Yield Opportunities</h3>
+      <div className="card" style={{overflow:'auto'}}>
+        <table>
+          <thead>
+            <tr><th>Protocol</th><th>Chain</th><th>Pool</th><th>APY</th><th>TVL</th><th>Links</th></tr>
+          </thead>
+          <tbody>
+            {YIELD_PROTOCOLS.map(p=>(
+              <tr key={p.id}>
+                <td>
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <span style={{fontSize:22}}>{p.emoji}</span>
+                    <span style={{fontWeight:700}}>{p.name}</span>
+                  </div>
+                </td>
+                <td><ChainBadge chain={p.chain}/></td>
+                <td><span className="badge badge-teal">{p.pool}</span></td>
+                <td><span style={{color:'#4ade80',fontWeight:800,fontSize:15}}>{p.apy}%</span></td>
+                <td style={{color:'#94a3b8'}}>{p.tvl}</td>
+                <td>
+                  <a href={`https://defillama.com/protocol/${p.id}`} target="_blank" rel="noopener noreferrer">
+                    <button className="btn-ghost" style={{fontSize:11,padding:'3px 8px'}}>📊 DeFiLlama</button>
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div style={{marginTop:20,display:'flex',flexWrap:'wrap',gap:12}}>
+        <a href="https://dune.com/scutuatua-crypto" target="_blank" rel="noopener noreferrer" style={{flex:'1 1 200px'}}>
+          <div className="card" style={{padding:16,cursor:'pointer',display:'flex',gap:12,alignItems:'center'}}>
+            <span style={{fontSize:28}}>📊</span>
+            <div><div style={{fontWeight:700}}>Dune Analytics</div><div style={{fontSize:12,color:'#64748b'}}>On-chain data dashboards</div></div>
+          </div>
+        </a>
+        <a href="https://defillama.com" target="_blank" rel="noopener noreferrer" style={{flex:'1 1 200px'}}>
+          <div className="card" style={{padding:16,cursor:'pointer',display:'flex',gap:12,alignItems:'center'}}>
+            <span style={{fontSize:28}}>🦙</span>
+            <div><div style={{fontWeight:700}}>DeFi Llama</div><div style={{fontSize:12,color:'#64748b'}}>TVL & protocol data</div></div>
+          </div>
+        </a>
+        <a href="https://app.aave.com" target="_blank" rel="noopener noreferrer" style={{flex:'1 1 200px'}}>
+          <div className="card" style={{padding:16,cursor:'pointer',display:'flex',gap:12,alignItems:'center'}}>
+            <span style={{fontSize:28}}>👻</span>
+            <div><div style={{fontWeight:700}}>Aave v3</div><div style={{fontSize:12,color:'#64748b'}}>Lend & borrow</div></div>
+          </div>
+        </a>
+      </div>
+    </div>
+  );
+};
+
+// ─── Identity Tab ─────────────────────────────────────────────────────────────
+const IdentityTab = ({ portfolio, wallets, splashlogs }) => {
+  const [identity, setIdentity] = useState(LS.get('ct-identity', { alias:'', bio:'', github:'' }));
+  const [editMode, setEditMode] = useState(false);
+  const [form, setForm]         = useState(identity);
+
+  const save = () => {
+    setIdentity(form);
+    LS.set('ct-identity', form);
+    setEditMode(false);
+  };
+
+  // unused in render but kept for future use
+  // const totalPortValue = portfolio.reduce(…);
+
+  const timeline = [
+    { year:'2021', event:'🌊 scutua01 identity created', badge:'reef-native' },
+    { year:'2022', event:'🔐 Polkadot multisig established', badge:'multisig' },
+    { year:'2023', event:'💎 TON blockchain migration begins', badge:'ton-pioneer' },
+    { year:'2023', event:'🪸 reef-ton project launched', badge:'reef-native' },
+    { year:'2024', event:'🐋 WhaleTrucker identity merged', badge:'whale' },
+    { year:'2025', event:'🚀 CryptoTruck v2 Super Boss Mode', badge:'legacy' },
+  ];
+
+  return (
+    <div className="fade-in">
+      {/* Profile card */}
+      <div className="card" style={{padding:24,marginBottom:20,background:'linear-gradient(135deg,rgba(14,165,233,.1),rgba(168,85,247,.08))'}}>
+        <div style={{display:'flex',alignItems:'flex-start',gap:20,flexWrap:'wrap'}}>
+          <div style={{width:80,height:80,borderRadius:20,background:'linear-gradient(135deg,#0ea5e9,#a855f7)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:40,flexShrink:0}}>
+            🐋
+          </div>
+          <div style={{flex:1}}>
+            <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+              <h2 style={{fontSize:22,fontWeight:800,color:'#e2e8f0'}}>{identity.alias || 'WhaleTrucker'}</h2>
+              <span className="badge badge-coral">🪸 Reef Native</span>
+              <span className="badge badge-yellow">🐋 Whale</span>
+            </div>
+            <div style={{fontSize:14,color:'#94a3b8',marginTop:6}}>{identity.bio || 'Reef identity mapper. TON blockchain pioneer. Legacy keeper.'}</div>
+            <div style={{display:'flex',gap:16,marginTop:12,flexWrap:'wrap'}}>
+              <div style={{fontSize:12}}>
+                <span style={{color:'#475569'}}>scutuatua-crypto</span>
+                <span style={{margin:'0 6px',color:'#1e3a5f'}}>←</span>
+                <span style={{color:'#64748b'}}>scutua01</span>
+                <span className="badge badge-green" style={{marginLeft:8,fontSize:10}}>✓ Linked</span>
+              </div>
+            </div>
+            {identity.github && (
+              <a href={`https://github.com/${identity.github}`} target="_blank" rel="noopener noreferrer" style={{display:'inline-flex',alignItems:'center',gap:6,marginTop:10,color:'#38bdf8',fontSize:13,textDecoration:'none'}}>
+                🐙 github.com/{identity.github}
+              </a>
+            )}
+          </div>
+          <button className="btn-ghost" onClick={()=>{setForm(identity);setEditMode(true);}} style={{fontSize:12}}>✏️ Edit</button>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div style={{display:'flex',flexWrap:'wrap',gap:12,marginBottom:20}}>
+        <StatCard emoji="💼" label="Holdings" value={portfolio.length} sub="assets tracked" />
+        <StatCard emoji="🔑" label="Wallets" value={wallets.length} sub="connected" color='#0098ea' />
+        <StatCard emoji="💧" label="SPLASHLOG" value={splashlogs.length} sub="checkpoints" color='#2dd4bf' />
+        <StatCard emoji="⛓️" label="Chains" value={[...new Set(wallets.map(w=>w.chain))].length||0} sub="networks" color='#c084fc' />
+      </div>
+
+      {/* Legacy Timeline */}
+      <h3 style={{fontWeight:700,marginBottom:12}}>🏛️ Legacy Timeline</h3>
+      <div className="card" style={{padding:0,overflow:'hidden',marginBottom:20}}>
+        {timeline.map((t,i)=>(
+          <div key={i} style={{padding:'14px 16px',borderBottom:i<timeline.length-1?'1px solid rgba(30,58,95,.4)':'none',display:'flex',gap:14,alignItems:'center'}}>
+            <div style={{width:48,flexShrink:0,textAlign:'center'}}>
+              <div style={{fontSize:12,fontWeight:700,color:'#0ea5e9',background:'rgba(14,165,233,.1)',borderRadius:6,padding:'3px 6px'}}>{t.year}</div>
+            </div>
+            <div style={{flex:1,fontSize:14,color:'#e2e8f0'}}>{t.event}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Connection map */}
+      <h3 style={{fontWeight:700,marginBottom:12}}>🔗 Identity Connections</h3>
+      <div style={{display:'flex',flexWrap:'wrap',gap:12}}>
+        {[
+          { from:'scutua01', to:'scutuatua-crypto', type:'GitHub', emoji:'🐙', status:'active' },
+          { from:'reef-ton', to:'cryptotruck', type:'Project', emoji:'🪸', status:'active' },
+          { from:'polkadot', to:'ton', type:'Migration', emoji:'🔐', status:'active' },
+          { from:'assets', to:'token-list', type:'Data Feed', emoji:'📦', status:'active' },
+          { from:'assetflow', to:'yields', type:'Analytics', emoji:'⚡', status:'active' },
+          { from:'ton-trucker', to:'identity', type:'Badge Ritual', emoji:'🏆', status:'active' },
+        ].map((c,i)=>(
+          <div key={i} className="card" style={{flex:'1 1 220px',padding:14}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
+              <span style={{fontSize:20}}>{c.emoji}</span>
+              <span className={`badge badge-${c.status==='active'?'green':'red'}`}>{c.type}</span>
+            </div>
+            <div style={{fontSize:13,display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+              <span style={{color:'#38bdf8',fontWeight:600}}>{c.from}</span>
+              <span style={{color:'#475569'}}>→</span>
+              <span style={{color:'#c084fc',fontWeight:600}}>{c.to}</span>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:4,marginTop:8}}>
+              <span className="status-dot status-online"></span>
+              <span style={{fontSize:11,color:'#22c55e'}}>Connected</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Edit Modal */}
+      {editMode && (
+        <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setEditMode(false)}}>
+          <div className="modal slide-in">
+            <h2 style={{fontSize:18,fontWeight:800,marginBottom:16}}>✏️ Edit Identity</h2>
+            <div style={{display:'flex',flexDirection:'column',gap:12}}>
+              <div>
+                <label style={{fontSize:12,color:'#94a3b8',marginBottom:6,display:'block'}}>Display Name / Alias</label>
+                <input className="input" placeholder="WhaleTrucker" value={form.alias} onChange={e=>setForm(f=>({...f,alias:e.target.value}))} />
+              </div>
+              <div>
+                <label style={{fontSize:12,color:'#94a3b8',marginBottom:6,display:'block'}}>Bio</label>
+                <textarea className="input" rows={3} placeholder="Reef identity mapper…" value={form.bio} onChange={e=>setForm(f=>({...f,bio:e.target.value}))} style={{resize:'vertical'}} />
+              </div>
+              <div>
+                <label style={{fontSize:12,color:'#94a3b8',marginBottom:6,display:'block'}}>GitHub Username</label>
+                <input className="input" placeholder="scutuatua-crypto" value={form.github} onChange={e=>setForm(f=>({...f,github:e.target.value}))} />
+              </div>
+              <button className="btn-primary" onClick={save}>💾 Save Identity</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Main App ─────────────────────────────────────────────────────────────────
+const App = () => {
+  const [tab, setTab]                 = useState('portfolio');
+  const [portfolio, setPortfolio]     = useState(() => LS.get('ct-portfolio', []));
+  const [wallets, setWallets]         = useState(() => LS.get('ct-wallets', []));
+  const [prices, setPrices]           = useState({});
+  const [loading, setLoading]         = useState(false);
+  const [notifications, setNotifications] = useState(() => LS.get('ct-notifications', [
+    { id:1, type:'launch', msg:'🚀 Welcome to CryptoTruck v2 Super Boss Mode!', ts:new Date().toISOString() },
+    { id:2, type:'info',   msg:'💡 Add wallets in the Wallets tab to track TON balances live', ts:new Date().toISOString() },
+  ]));
+  const [splashlogs, setSplashlogs]   = useState(() => LS.get('ct-splashlogs', SPLASHLOGS));
+  const unread = notifications.filter(n => !n.read).length;
+
+  const addNotification = (n) => {
+    const entry = { id:Date.now()+Math.random(), ts:new Date().toISOString(), ...n };
+    setNotifications(prev => { const u=[entry,...prev].slice(0,50); LS.set('ct-notifications',u); return u; });
+  };
+
+  const TABS = [
+    { id:'portfolio',  label:'Portfolio',      emoji:'💼' },
+    { id:'wallets',    label:'Wallets',         emoji:'🔑' },
+    { id:'ton',        label:'TON Hub',         emoji:'💎' },
+    { id:'badges',     label:'Badges',          emoji:'🏆' },
+    { id:'yields',     label:'Yields',          emoji:'⚡' },
+    { id:'notifs',     label:'Notifications',   emoji:'🔔', badge: unread > 0 ? unread : null },
+    { id:'identity',   label:'Identity',        emoji:'🧬' },
+  ];
+
+  const handleExport = () => {
+    const data = { portfolio, wallets, prices, splashlogs, exportedAt: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a'); a.href=url; a.download='cryptotruck-export.json'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const totalVal = portfolio.reduce((s,p)=>s+(p.amount*(prices[p.coinId]?.usd||0)),0);
+  const tonBals  = wallets.filter(w=>w.chain==='ton');
+
+  return (
+    <div style={{minHeight:'100vh',background:'linear-gradient(160deg,#020817 0%,#0a0f1e 40%,#0d1930 100%)'}}>
+      {/* Header */}
+      <div style={{background:'rgba(10,15,30,.95)',backdropFilter:'blur(16px)',borderBottom:'1px solid rgba(14,165,233,.15)',position:'sticky',top:0,zIndex:50}}>
+        <div style={{maxWidth:1280,margin:'0 auto',padding:'12px 16px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}}>
+          <div style={{display:'flex',alignItems:'center',gap:12}}>
+            <div style={{background:'linear-gradient(135deg,#0ea5e9,#0284c7)',padding:'8px 10px',borderRadius:10,fontSize:22}}>🚚</div>
+            <div>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <h1 style={{fontSize:20,fontWeight:800,color:'#f1f5f9',letterSpacing:'-0.3px'}}>CryptoTruck</h1>
+                <span style={{background:'linear-gradient(135deg,#0ea5e9,#a855f7)',color:'#fff',fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:20}}>v2 BOSS</span>
+              </div>
+              <div style={{fontSize:12,color:'#475569'}}>reef-ton · multi-chain · live 🟢</div>
+            </div>
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+            {totalVal > 0 && (
+              <div style={{background:'rgba(14,165,233,.1)',border:'1px solid rgba(14,165,233,.2)',borderRadius:8,padding:'6px 12px',fontSize:13,fontWeight:700,color:'#38bdf8'}}>
+                💼 {fmtUSD(totalVal)}
+              </div>
+            )}
+            <button className="btn-ghost" onClick={handleExport} style={{fontSize:12,padding:'6px 10px'}}>📤 Export</button>
+            <div style={{display:'flex',alignItems:'center',gap:6,fontSize:12,color:'#22c55e'}}>
+              <span className="status-dot status-online pulse"></span> Live
+            </div>
+          </div>
+        </div>
+
+        {/* Tab bar */}
+        <div style={{maxWidth:1280,margin:'0 auto',padding:'0 16px 0',display:'flex',gap:4,overflowX:'auto',paddingBottom:1}}>
+          {TABS.map(t=>(
+            <button key={t.id} className={`tab-btn ${tab===t.id?'active':''}`}
+              style={{padding:'8px 14px',background:'transparent',border:'none',borderBottom: tab===t.id?'2px solid #0ea5e9':'2px solid transparent',color:tab===t.id?'#38bdf8':'#64748b',cursor:'pointer',fontSize:13,fontWeight:600,whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:5,transition:'all .2s'}}
+              onClick={()=>setTab(t.id)}>
+              <span>{t.emoji}</span>
+              <span>{t.label}</span>
+              {t.badge && <span style={{background:'#ef4444',color:'#fff',borderRadius:'50%',width:16,height:16,fontSize:10,display:'flex',alignItems:'center',justifyContent:'center'}}>{t.badge}</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div style={{maxWidth:1280,margin:'0 auto',padding:'20px 16px'}}>
+        {tab === 'portfolio' && <PortfolioTab portfolio={portfolio} setPortfolio={setPortfolio} prices={prices} setPrices={setPrices} loading={loading} setLoading={setLoading} />}
+        {tab === 'wallets'   && <WalletsTab wallets={wallets} setWallets={setWallets} addNotification={addNotification} />}
+        {tab === 'ton'       && <TONHubTab wallets={wallets} prices={prices} />}
+        {tab === 'badges'    && <BadgesTab portfolio={portfolio} wallets={wallets} notifications={notifications} splashlogs={splashlogs} setSplashlogs={setSplashlogs} />}
+        {tab === 'yields'    && <YieldsTab />}
+        {tab === 'notifs'    && <NotificationsTab notifications={notifications} setNotifications={setNotifications} prices={prices} portfolio={portfolio} />}
+        {tab === 'identity'  && <IdentityTab portfolio={portfolio} wallets={wallets} splashlogs={splashlogs} />}
+      </div>
+
+      {/* Footer */}
+      <div style={{textAlign:'center',padding:'24px 16px',color:'#1e3a5f',fontSize:12,borderTop:'1px solid rgba(14,165,233,.08)'}}>
+        🚚 CryptoTruck v2 · reef-ton ecosystem · Built for the WhaleTrucker 🐋
+      </div>
+    </div>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
