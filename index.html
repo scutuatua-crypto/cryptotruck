@@ -175,6 +175,23 @@ const getExplorerUrl = (chain, address) => {
 // ─── Sub-components ──────────────────────────────────────────────────────────
 const Spinner = ({size=16}) => <span className="spin" style={{display:'inline-block',fontSize:size}}>⟳</span>;
 
+const Toast = ({ toasts }) => (
+  <div style={{position:'fixed',top:20,right:20,zIndex:9999,display:'flex',flexDirection:'column',gap:8,pointerEvents:'none',maxWidth:360}}>
+    {toasts.map(t => {
+      const borderColor = t.type==='badge' ? 'rgba(168,85,247,.7)' : t.type==='price' ? 'rgba(34,197,94,.7)' : t.type==='multisig' ? 'rgba(168,85,247,.7)' : t.type==='wallet' ? 'rgba(0,152,234,.7)' : 'rgba(14,165,233,.6)';
+      return (
+        <div key={t.id} className="slide-in" style={{background:'rgba(10,15,30,.97)',border:`1px solid ${borderColor}`,borderRadius:12,padding:'12px 16px',display:'flex',gap:10,alignItems:'flex-start',boxShadow:'0 8px 32px rgba(0,0,0,.6)',backdropFilter:'blur(16px)',pointerEvents:'auto'}}>
+          <span style={{fontSize:22,lineHeight:1}}>{t.emoji||'🔔'}</span>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:13,fontWeight:700,color:'#e2e8f0'}}>{t.title}</div>
+            <div style={{fontSize:12,color:'#94a3b8',marginTop:3,lineHeight:1.4}}>{t.msg}</div>
+          </div>
+        </div>
+      );
+    })}
+  </div>
+);
+
 const StatCard = ({emoji, label, value, sub, color='#0ea5e9'}) => (
   <div className="card" style={{padding:'16px 20px',flex:'1 1 160px',minWidth:0}}>
     <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between'}}>
@@ -380,27 +397,40 @@ const PortfolioTab = ({ portfolio, setPortfolio, prices, setPrices, loading, set
   );
 };
 
-// ─── Wallets Tab ──────────────────────────────────────────────────────────────
-const WalletsTab = ({ wallets, setWallets, addNotification }) => {
+// ─── TON Hub Tab (TON price + balance lookup + reef-ton badges + wallet management) ──
+const TONHubTab = ({ wallets, setWallets, prices, portfolio, splashlogs, setSplashlogs, addNotification, addToast }) => {
+  // Wallet management state
   const [showAdd, setShowAdd]   = useState(false);
-  const [form, setForm]         = useState({ label:'', address:'', chain:'eth', type:'standard' });
+  const [wForm, setWForm]       = useState({ label:'', address:'', chain:'eth', type:'standard' });
   const [balances, setBalances] = useState({});
   const [loadingW, setLoadingW] = useState({});
   const [txs, setTxs]           = useState({});
+  // TON balance lookup state
+  const [tonAddr, setTonAddr]   = useState('');
+  const [tonBal, setTonBal]     = useState(null);
+  const [tonLoading, setTonLoading] = useState(false);
+  const [tonTxs, setTonTxs]    = useState([]);
+  const [tonErr, setTonErr]     = useState('');
+  // Badge + SPLASHLOG state
+  const [mintTarget, setMintTarget]   = useState(null);
+  const [newLog, setNewLog]           = useState('');
+  const [showLogForm, setShowLogForm] = useState(false);
 
-  const save = (w) => { setWallets(w); LS.set('ct-wallets', w); };
+  const saveWallets = (w) => { setWallets(w); LS.set('ct-wallets', w); };
 
   const addWallet = () => {
-    if (!form.address.trim()) return;
-    const w = { id:Date.now(), label:form.label||truncAddr(form.address), address:form.address.trim(), chain:form.chain, type:form.type, addedAt:new Date().toISOString() };
-    save([...wallets, w]);
-    if (form.chain === 'ton') fetchTONData(w);
-    addNotification({ type:'wallet', msg:`🔗 Wallet added: ${form.label||truncAddr(form.address)} on ${CHAINS[form.chain]?.name}` });
-    setForm({ label:'', address:'', chain:'eth', type:'standard' });
+    if (!wForm.address.trim()) return;
+    const w = { id:Date.now(), label:wForm.label||truncAddr(wForm.address), address:wForm.address.trim(), chain:wForm.chain, type:wForm.type, addedAt:new Date().toISOString() };
+    saveWallets([...wallets, w]);
+    if (wForm.chain === 'ton') fetchTONData(w);
+    const notif = { type:'wallet', msg:`🔗 Wallet added: ${wForm.label||truncAddr(wForm.address)} on ${CHAINS[wForm.chain]?.name}` };
+    addNotification(notif);
+    addToast({ type:'wallet', emoji:'🔑', title:'Wallet Connected', msg:`${wForm.label||truncAddr(wForm.address)} on ${CHAINS[wForm.chain]?.name||wForm.chain}` });
+    setWForm({ label:'', address:'', chain:'eth', type:'standard' });
     setShowAdd(false);
   };
 
-  const remove = (id) => { save(wallets.filter(w=>w.id!==id)); };
+  const removeWallet = (id) => { saveWallets(wallets.filter(w=>w.id!==id)); };
 
   const fetchTONData = async (w) => {
     setLoadingW(l=>({...l,[w.id]:true}));
@@ -415,198 +445,26 @@ const WalletsTab = ({ wallets, setWallets, addNotification }) => {
     wallets.filter(w=>w.chain==='ton').forEach(fetchTONData);
   }, []);
 
+  // Badge earned logic
+  const earned = new Set();
+  if (LS.get('ct-identity',null)) earned.add('reef-native');
+  if (wallets.some(w=>w.chain==='ton')) earned.add('ton-pioneer');
+  if ([...new Set(wallets.map(w=>w.chain))].length>=5) earned.add('multi-chain');
+  if (wallets.some(w=>w.type==='multisig')) earned.add('multisig');
+  if (splashlogs.length>=10) earned.add('splashlog');
+  if (LS.get('ct-webhooks',[]).length>0) earned.add('notifier');
+  if (LS.get('ct-identity',null)) earned.add('legacy');
+  if (portfolio.some(p=>p.addedAt && (Date.now()-new Date(p.addedAt))>30*86400000)) earned.add('hodler');
+  if (portfolio.reduce((s,p)=>s+(p.amount*(prices[p.coinId]?.usd||0)),0)>100000) earned.add('whale');
+  earned.add('defi'); // DeFi ranges visible in reef-ton
+
+  const totalXP = REEF_BADGES.filter(b=>earned.has(b.id)).reduce((s,b)=>s+b.xp,0);
+  const level   = Math.floor(totalXP/200)+1;
+
   const totalTON = wallets.filter(w=>w.chain==='ton').reduce((s,w)=>s+(balances[w.id]||0),0);
   const multisigWallets = wallets.filter(w=>w.type==='multisig');
-
-  return (
-    <div className="fade-in">
-      {/* Stats */}
-      <div style={{display:'flex',flexWrap:'wrap',gap:12,marginBottom:20}}>
-        <StatCard emoji="🔑" label="Total Wallets" value={wallets.length} sub="across all chains" />
-        <StatCard emoji="💎" label="TON Balance" value={`${totalTON.toFixed(4)} TON`} sub={`${wallets.filter(w=>w.chain==='ton').length} TON wallets`} color='#0098ea' />
-        <StatCard emoji="🔐" label="Multisig" value={multisigWallets.length} sub="active multisigs" color='#c084fc' />
-        <StatCard emoji="⛓️" label="Networks" value={[...new Set(wallets.map(w=>w.chain))].length} sub="connected" color='#2dd4bf' />
-      </div>
-
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16,flexWrap:'wrap',gap:10}}>
-        <h3 style={{fontWeight:700,fontSize:16}}>💼 Connected Wallets</h3>
-        <button className="btn-primary" onClick={()=>setShowAdd(true)}>+ Add Wallet</button>
-      </div>
-
-      {wallets.length === 0 ? (
-        <div className="card" style={{padding:'48px',textAlign:'center',color:'#475569'}}>
-          <div style={{fontSize:48,marginBottom:12}}>🔑</div>
-          <div style={{fontSize:18,fontWeight:700,marginBottom:6}}>No wallets connected</div>
-          <div style={{fontSize:14,marginBottom:20}}>Add your EVM or TON wallet addresses to track balances</div>
-          <button className="btn-primary" onClick={()=>setShowAdd(true)}>+ Connect First Wallet</button>
-        </div>
-      ) : (
-        <div style={{display:'flex',flexDirection:'column',gap:12}}>
-          {wallets.map(w => {
-            const chain = CHAINS[w.chain] || {name:w.chain,emoji:'🔗',color:'#94a3b8'};
-            const bal = balances[w.id];
-            const wTxs = txs[w.id] || [];
-            return (
-              <div key={w.id} className="card" style={{padding:16}}>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:10}}>
-                  <div style={{display:'flex',alignItems:'center',gap:12}}>
-                    <div style={{width:44,height:44,borderRadius:10,background:`${chain.color}22`,border:`2px solid ${chain.color}44`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22}}>
-                      {chain.emoji}
-                    </div>
-                    <div>
-                      <div style={{fontWeight:700,fontSize:15,color:'#e2e8f0'}}>{w.label}</div>
-                      <div style={{fontFamily:'monospace',fontSize:12,color:'#64748b',marginTop:2}}>{truncAddr(w.address,8)}</div>
-                      <div style={{display:'flex',gap:6,marginTop:6,flexWrap:'wrap'}}>
-                        <ChainBadge chain={w.chain} />
-                        <span className={`badge ${w.type==='multisig'?'badge-purple':w.type==='proxy'?'badge-coral':'badge-teal'}`}>
-                          {w.type === 'multisig' ? '🔐 Multisig' : w.type === 'proxy' ? '🔀 Proxy' : '👤 Standard'}
-                        </span>
-                        {w.type==='multisig' && <span className="badge badge-yellow">⚡ Polkadot→TON</span>}
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:8}}>
-                    {w.chain === 'ton' && (
-                      <div style={{textAlign:'right'}}>
-                        {loadingW[w.id] ? <Spinner /> : (
-                          <div>
-                            <div style={{fontSize:20,fontWeight:800,color:'#0098ea'}}>
-                              {bal !== undefined ? `${bal.toFixed(4)} TON` : '–'}
-                            </div>
-                            <button className="btn-ghost" style={{fontSize:11,marginTop:4,padding:'3px 8px'}} onClick={()=>fetchTONData(w)}>🔄 Refresh</button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    <div style={{display:'flex',gap:6}}>
-                      <a href={getExplorerUrl(w.chain, w.address)} target="_blank" rel="noopener noreferrer">
-                        <button className="btn-ghost" style={{fontSize:11,padding:'4px 8px'}}>🔗 Explorer</button>
-                      </a>
-                      <button className="btn-danger" onClick={()=>remove(w.id)} style={{fontSize:11,padding:'4px 8px'}}>✕</button>
-                    </div>
-                  </div>
-                </div>
-                {/* Recent TON transactions */}
-                {wTxs.length > 0 && (
-                  <div style={{marginTop:12,borderTop:'1px solid rgba(30,58,95,.5)',paddingTop:12}}>
-                    <div style={{fontSize:12,color:'#64748b',marginBottom:8,fontWeight:600}}>📋 Recent Transactions</div>
-                    {wTxs.slice(0,3).map((tx,i)=>(
-                      <div key={i} style={{display:'flex',justifyContent:'space-between',fontSize:12,padding:'4px 0',color:'#94a3b8'}}>
-                        <span>⟳ {truncAddr(tx.transaction_id?.hash||'',8)}</span>
-                        <span>{tx.utime ? ago(new Date(tx.utime*1000).toISOString()) : '–'}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Multisig section */}
-      {multisigWallets.length > 0 && (
-        <div style={{marginTop:24}}>
-          <h3 style={{fontWeight:700,fontSize:16,marginBottom:12}}>🔐 Multisig Orchestration</h3>
-          <div className="card" style={{padding:16}}>
-            <div style={{display:'flex',flexWrap:'wrap',gap:16}}>
-              {multisigWallets.map(w=>(
-                <div key={w.id} style={{flex:'1 1 220px',background:'rgba(168,85,247,.08)',border:'1px solid rgba(168,85,247,.3)',borderRadius:10,padding:14}}>
-                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
-                    <span style={{fontSize:20}}>🔐</span>
-                    <div>
-                      <div style={{fontWeight:700,color:'#e2e8f0'}}>{w.label}</div>
-                      <div style={{fontSize:11,color:'#94a3b8'}}>{truncAddr(w.address,8)}</div>
-                    </div>
-                  </div>
-                  <div style={{display:'flex',flexDirection:'column',gap:6,fontSize:12}}>
-                    <div style={{display:'flex',justifyContent:'space-between'}}>
-                      <span style={{color:'#64748b'}}>Chain</span>
-                      <ChainBadge chain={w.chain} />
-                    </div>
-                    <div style={{display:'flex',justifyContent:'space-between'}}>
-                      <span style={{color:'#64748b'}}>Type</span>
-                      <span className="badge badge-purple">Multisig</span>
-                    </div>
-                    <div style={{display:'flex',justifyContent:'space-between'}}>
-                      <span style={{color:'#64748b'}}>Migration</span>
-                      <span className="badge badge-yellow">DOT → TON</span>
-                    </div>
-                    {balances[w.id] !== undefined && (
-                      <div style={{display:'flex',justifyContent:'space-between'}}>
-                        <span style={{color:'#64748b'}}>Balance</span>
-                        <strong style={{color:'#0098ea'}}>{balances[w.id].toFixed(4)} TON</strong>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Wallet Modal */}
-      {showAdd && (
-        <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowAdd(false)}}>
-          <div className="modal slide-in">
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-              <h2 style={{fontSize:20,fontWeight:800}}>🔑 Add Wallet</h2>
-              <button className="btn-ghost" onClick={()=>setShowAdd(false)}>✕</button>
-            </div>
-            <div style={{display:'flex',flexDirection:'column',gap:14}}>
-              <div>
-                <label style={{fontSize:12,color:'#94a3b8',marginBottom:6,display:'block'}}>Chain</label>
-                <select className="input" value={form.chain} onChange={e=>setForm(f=>({...f,chain:e.target.value}))}>
-                  {Object.entries(CHAINS).map(([k,v])=><option key={k} value={k}>{v.emoji} {v.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={{fontSize:12,color:'#94a3b8',marginBottom:6,display:'block'}}>Wallet Address</label>
-                <input className="input" placeholder={form.chain==='ton' ? 'EQA…or UQ…' : '0x…'} value={form.address} onChange={e=>setForm(f=>({...f,address:e.target.value}))} />
-              </div>
-              <div>
-                <label style={{fontSize:12,color:'#94a3b8',marginBottom:6,display:'block'}}>Label (optional)</label>
-                <input className="input" placeholder="e.g. Main Wallet" value={form.label} onChange={e=>setForm(f=>({...f,label:e.target.value}))} />
-              </div>
-              <div>
-                <label style={{fontSize:12,color:'#94a3b8',marginBottom:6,display:'block'}}>Wallet Type</label>
-                <select className="input" value={form.type} onChange={e=>setForm(f=>({...f,type:e.target.value}))}>
-                  <option value="standard">👤 Standard</option>
-                  <option value="multisig">🔐 Multisig (Polkadot→TON)</option>
-                  <option value="proxy">🔀 Proxy</option>
-                </select>
-              </div>
-              {form.chain === 'ton' && (
-                <div style={{background:'rgba(0,152,234,.1)',border:'1px solid rgba(0,152,234,.3)',borderRadius:8,padding:12,fontSize:13}}>
-                  💎 TON wallets will have their balance auto-fetched from TON Center API
-                </div>
-              )}
-              {form.type === 'multisig' && (
-                <div style={{background:'rgba(168,85,247,.1)',border:'1px solid rgba(168,85,247,.3)',borderRadius:8,padding:12,fontSize:13}}>
-                  🔐 Multisig wallets support Polkadot → TON migration tracking with proxy type translation
-                </div>
-              )}
-              <button className="btn-primary" onClick={addWallet}>Add Wallet</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ─── TON Hub Tab ──────────────────────────────────────────────────────────────
-const TONHubTab = ({ wallets, prices }) => {
-  const [tonAddr, setTonAddr]     = useState('');
-  const [tonBal, setTonBal]       = useState(null);
-  const [tonLoading, setTonLoading] = useState(false);
-  const [tonTxs, setTonTxs]       = useState([]);
-  const [tonErr, setTonErr]       = useState('');
-
-  const tonWallets = wallets.filter(w=>w.chain==='ton');
-  const tonPrice   = prices['the-open-network']?.usd || 0;
-  const ton24h     = prices['the-open-network']?.usd_24h_change || 0;
+  const tonPrice = prices['the-open-network']?.usd || 0;
+  const ton24h   = prices['the-open-network']?.usd_24h_change || 0;
 
   const fetchAddr = async () => {
     if (!tonAddr.trim()) return;
@@ -618,20 +476,29 @@ const TONHubTab = ({ wallets, prices }) => {
     setTonLoading(false);
   };
 
+  const addSplashlog = () => {
+    if (!newLog.trim()) return;
+    const entry = { id:Date.now(), ts:new Date().toISOString(), msg:newLog.trim(), type:'manual' };
+    const updated = [...splashlogs, entry];
+    setSplashlogs(updated);
+    LS.set('ct-splashlogs', updated);
+    setNewLog('');
+    setShowLogForm(false);
+  };
+
   const tonTokens = [
-    { name:'Toncoin',  ticker:'TON',    emoji:'💎', mcap:'$14.2B', supply:'5.1B' },
-    { name:'USDT',     ticker:'USDT',   emoji:'💚', mcap:'$83B',   supply:'–'    },
-    { name:'NOT',      ticker:'NOT',    emoji:'🫧', mcap:'$620M',  supply:'102B' },
-    { name:'DOGS',     ticker:'DOGS',   emoji:'🐕', mcap:'$180M',  supply:'550B' },
-    { name:'SCALE',    ticker:'SCALE',  emoji:'⚖️', mcap:'$48M',   supply:'10B'  },
-    { name:'STON',     ticker:'STON',   emoji:'🟣', mcap:'$34M',   supply:'100M' },
-    { name:'MEGA',     ticker:'MEGA',   emoji:'🔷', mcap:'$12M',   supply:'1B'   },
-    { name:'DFC',      ticker:'DFC',    emoji:'🏦', mcap:'$9M',    supply:'21M'  },
+    { name:'Toncoin', ticker:'TON',   emoji:'💎', mcap:'$14.2B', supply:'5.1B' },
+    { name:'USDT',    ticker:'USDT',  emoji:'💚', mcap:'$83B',   supply:'–'    },
+    { name:'NOT',     ticker:'NOT',   emoji:'🫧', mcap:'$620M',  supply:'102B' },
+    { name:'DOGS',    ticker:'DOGS',  emoji:'🐕', mcap:'$180M',  supply:'550B' },
+    { name:'SCALE',   ticker:'SCALE', emoji:'⚖️', mcap:'$48M',   supply:'10B'  },
+    { name:'STON',    ticker:'STON',  emoji:'🟣', mcap:'$34M',   supply:'100M' },
   ];
 
   return (
     <div className="fade-in">
-      {/* TON Price Banner */}
+
+      {/* ── TON Price Banner ── */}
       <div className="card glow" style={{padding:20,marginBottom:20,background:'linear-gradient(135deg,rgba(0,152,234,.15),rgba(0,152,234,.05))'}}>
         <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
           <div style={{fontSize:48}}>💎</div>
@@ -643,8 +510,8 @@ const TONHubTab = ({ wallets, prices }) => {
             </div>
           </div>
           <div style={{display:'flex',flexDirection:'column',gap:8,textAlign:'right'}}>
-            <div><span className="badge badge-blue">TON Blockchain</span></div>
-            <div style={{fontSize:12,color:'#64748b'}}>Connected wallets: {tonWallets.length}</div>
+            <span className="badge badge-blue">TON Blockchain</span>
+            <div style={{fontSize:12,color:'#64748b'}}>Connected: {wallets.filter(w=>w.chain==='ton').length} wallets</div>
             <a href="https://tonscan.org" target="_blank" rel="noopener noreferrer">
               <button className="btn-ghost" style={{fontSize:12,padding:'4px 10px'}}>🔗 TONScan</button>
             </a>
@@ -652,14 +519,25 @@ const TONHubTab = ({ wallets, prices }) => {
         </div>
       </div>
 
-      {/* Balance Lookup */}
+      {/* ── Stat row ── */}
+      <div style={{display:'flex',flexWrap:'wrap',gap:12,marginBottom:20}}>
+        <StatCard emoji="💎" label="TON Holdings" value={`${totalTON.toFixed(4)} TON`} sub={tonPrice ? fmtUSD(totalTON*tonPrice) : ''} color='#0098ea' />
+        <StatCard emoji="🏆" label="Badges Earned" value={`${earned.size}/${REEF_BADGES.length}`} sub={`${totalXP} XP · Level ${level}`} color='#c084fc' />
+        <StatCard emoji="🔐" label="Multisig" value={multisigWallets.length} sub="active reef multisigs" color='#a855f7' />
+        <StatCard emoji="🔑" label="Wallets" value={wallets.length} sub="across all chains" color='#2dd4bf' />
+      </div>
+
+      {/* ── TON Wallet Lookup ── */}
       <div className="card" style={{padding:20,marginBottom:20}}>
         <h3 style={{fontWeight:700,marginBottom:14}}>🔍 TON Wallet Lookup</h3>
         <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
-          <input className="input" style={{flex:'1 1 260px'}} placeholder="Enter TON address (EQA… or UQ…)" value={tonAddr} onChange={e=>setTonAddr(e.target.value)} onKeyDown={e=>e.key==='Enter'&&fetchAddr()} />
+          <input className="input" style={{flex:'1 1 260px'}} placeholder="Enter TON address (EQA… or UQ…)" value={tonAddr}
+            onChange={e=>setTonAddr(e.target.value)} onKeyDown={e=>e.key==='Enter'&&fetchAddr()} />
           <button className="btn-primary" onClick={fetchAddr} style={{flex:'0 0 auto'}}>{tonLoading?<Spinner />:'🔍 Check'}</button>
         </div>
-        {tonErr && <div style={{marginTop:10,padding:'10px 14px',background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,fontSize:13,color:'#f87171'}}>{tonErr}</div>}
+        {tonErr && (
+          <div style={{marginTop:10,padding:'10px 14px',background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,fontSize:13,color:'#f87171'}}>{tonErr}</div>
+        )}
         {tonBal !== null && !tonErr && (
           <div style={{marginTop:14,background:'rgba(0,152,234,.08)',border:'1px solid rgba(0,152,234,.3)',borderRadius:10,padding:16}}>
             <div style={{display:'flex',justifyContent:'space-between',flexWrap:'wrap',gap:10}}>
@@ -668,11 +546,9 @@ const TONHubTab = ({ wallets, prices }) => {
                 <div style={{fontSize:28,fontWeight:800,color:'#0098ea'}}>{tonBal.toFixed(4)} TON</div>
                 {tonPrice>0 && <div style={{fontSize:14,color:'#94a3b8',marginTop:4}}>{fmtUSD(tonBal*tonPrice)}</div>}
               </div>
-              <div style={{display:'flex',flexDirection:'column',gap:6,fontSize:13}}>
-                <a href={`https://tonscan.org/address/${tonAddr}`} target="_blank" rel="noopener noreferrer">
-                  <button className="btn-ghost" style={{fontSize:12}}>🔗 View on TONScan</button>
-                </a>
-              </div>
+              <a href={`https://tonscan.org/address/${tonAddr}`} target="_blank" rel="noopener noreferrer">
+                <button className="btn-ghost" style={{fontSize:12,alignSelf:'center'}}>🔗 View on TONScan</button>
+              </a>
             </div>
             {tonTxs.length>0 && (
               <div style={{marginTop:14}}>
@@ -689,148 +565,172 @@ const TONHubTab = ({ wallets, prices }) => {
         )}
       </div>
 
-      {/* Connected TON Wallets */}
-      {tonWallets.length>0 && (
-        <div style={{marginBottom:20}}>
-          <h3 style={{fontWeight:700,marginBottom:12}}>💼 My TON Wallets</h3>
-          <div style={{display:'flex',flexDirection:'column',gap:10}}>
-            {tonWallets.map(w=>(
-              <div key={w.id} className="card" style={{padding:14,display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}}>
-                <div>
-                  <div style={{fontWeight:700,color:'#e2e8f0'}}>{w.label}</div>
-                  <div style={{fontFamily:'monospace',fontSize:12,color:'#64748b',marginTop:2}}>{truncAddr(w.address,10)}</div>
-                </div>
-                <div style={{display:'flex',gap:8,alignItems:'center'}}>
-                  <span className={`badge ${w.type==='multisig'?'badge-purple':'badge-teal'}`}>{w.type==='multisig'?'🔐 Multisig':'👤 Standard'}</span>
-                  <a href={`https://tonscan.org/address/${w.address}`} target="_blank" rel="noopener noreferrer">
-                    <button className="btn-ghost" style={{fontSize:11,padding:'3px 8px'}}>🔗</button>
-                  </a>
+      {/* ── Reef-Ton Badge Showcase ── */}
+      <div style={{marginBottom:24}}>
+        <div className="card" style={{padding:20,marginBottom:16,background:'linear-gradient(135deg,rgba(168,85,247,.15),rgba(168,85,247,.05))'}}>
+          <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
+            <div style={{width:60,height:60,borderRadius:'50%',background:'linear-gradient(135deg,#a855f7,#7c3aed)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:26,flexShrink:0}}>🏆</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:12,color:'#94a3b8'}}>Reef Rank</div>
+              <div style={{fontSize:24,fontWeight:800,color:'#c084fc'}}>Level {level} WhaleTrucker</div>
+              <div style={{fontSize:13,color:'#64748b',marginTop:4}}>{totalXP} XP · {earned.size}/{REEF_BADGES.length} badges</div>
+              <div className="progress" style={{marginTop:8,maxWidth:280}}>
+                <div className="progress-bar" style={{width:`${((totalXP%200)/200)*100}%`,background:'linear-gradient(90deg,#a855f7,#c084fc)'}} />
+              </div>
+            </div>
+            <span className="badge badge-teal" style={{fontSize:12}}>🪸 reef-ton v1</span>
+          </div>
+        </div>
+        <h3 style={{fontWeight:700,fontSize:15,marginBottom:12}}>🎖️ Reef-Ton Achievement Badges</h3>
+        <div style={{display:'flex',flexWrap:'wrap',gap:10}}>
+          {REEF_BADGES.map(b=>{
+            const isEarned = earned.has(b.id);
+            return (
+              <div key={b.id} className="card" style={{flex:'1 1 160px',padding:14,opacity:isEarned?1:0.45,position:'relative',cursor:isEarned?'default':'pointer',transition:'all .2s'}}
+                onClick={()=>!isEarned&&setMintTarget(b)}>
+                {isEarned ? <div style={{position:'absolute',top:7,right:8,fontSize:11}}>✅</div> : <div style={{position:'absolute',top:7,right:8,fontSize:11,color:'#475569'}}>🔒</div>}
+                <div style={{fontSize:28,marginBottom:6}}>{b.emoji}</div>
+                <div style={{fontWeight:700,fontSize:13,color:'#e2e8f0',marginBottom:3}}>{b.name}</div>
+                <div style={{fontSize:11,color:'#64748b',marginBottom:6}}>{b.desc}</div>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <span className={`badge ${RARITY_COLOR[b.rarity]}`} style={{fontSize:10}}>{b.rarity}</span>
+                  <span style={{fontSize:11,color:'#fbbf24',fontWeight:700}}>+{b.xp}XP</span>
                 </div>
               </div>
-            ))}
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Connected Wallets ── */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,flexWrap:'wrap',gap:10}}>
+        <h3 style={{fontWeight:700,fontSize:15}}>🔑 Connected Wallets</h3>
+        <button className="btn-primary" style={{fontSize:13}} onClick={()=>setShowAdd(true)}>+ Add Wallet</button>
+      </div>
+      {wallets.length === 0 ? (
+        <div className="card" style={{padding:'32px',textAlign:'center',color:'#475569',marginBottom:20}}>
+          <div style={{fontSize:40,marginBottom:10}}>🔑</div>
+          <div style={{fontSize:16,fontWeight:700,marginBottom:6}}>No wallets connected</div>
+          <div style={{fontSize:13,marginBottom:16}}>Add your EVM or TON wallet addresses to track balances</div>
+          <button className="btn-primary" onClick={()=>setShowAdd(true)}>+ Connect Wallet</button>
+        </div>
+      ) : (
+        <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:20}}>
+          {wallets.map(w=>{
+            const chain = CHAINS[w.chain]||{name:w.chain,emoji:'🔗',color:'#94a3b8'};
+            const bal   = balances[w.id];
+            const wTxs  = txs[w.id]||[];
+            return (
+              <div key={w.id} className="card" style={{padding:14}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:10}}>
+                  <div style={{display:'flex',alignItems:'center',gap:10}}>
+                    <div style={{width:40,height:40,borderRadius:8,background:`${chain.color}22`,border:`2px solid ${chain.color}44`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0}}>{chain.emoji}</div>
+                    <div>
+                      <div style={{fontWeight:700,fontSize:14,color:'#e2e8f0'}}>{w.label}</div>
+                      <div style={{fontFamily:'monospace',fontSize:11,color:'#64748b',marginTop:2}}>{truncAddr(w.address,8)}</div>
+                      <div style={{display:'flex',gap:5,marginTop:5,flexWrap:'wrap'}}>
+                        <ChainBadge chain={w.chain} />
+                        <span className={`badge ${w.type==='multisig'?'badge-purple':w.type==='proxy'?'badge-coral':'badge-teal'}`} style={{fontSize:10}}>
+                          {w.type==='multisig'?'🔐 Multisig':w.type==='proxy'?'🔀 Proxy':'👤 Standard'}
+                        </span>
+                        {w.type==='multisig' && <span className="badge badge-yellow" style={{fontSize:10}}>⚡ DOT→TON</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6}}>
+                    {w.chain==='ton' && (
+                      <div style={{textAlign:'right'}}>
+                        {loadingW[w.id] ? <Spinner /> : (
+                          <div>
+                            <div style={{fontSize:18,fontWeight:800,color:'#0098ea'}}>{bal!==undefined?`${bal.toFixed(4)} TON`:'–'}</div>
+                            <button className="btn-ghost" style={{fontSize:10,marginTop:3,padding:'2px 7px'}} onClick={()=>fetchTONData(w)}>🔄</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <div style={{display:'flex',gap:5}}>
+                      <a href={getExplorerUrl(w.chain,w.address)} target="_blank" rel="noopener noreferrer">
+                        <button className="btn-ghost" style={{fontSize:11,padding:'4px 8px'}}>🔗</button>
+                      </a>
+                      <button className="btn-danger" onClick={()=>removeWallet(w.id)} style={{fontSize:11,padding:'4px 8px'}}>✕</button>
+                    </div>
+                  </div>
+                </div>
+                {wTxs.length>0 && (
+                  <div style={{marginTop:10,borderTop:'1px solid rgba(30,58,95,.5)',paddingTop:10}}>
+                    <div style={{fontSize:11,color:'#64748b',marginBottom:6,fontWeight:600}}>📋 Recent Txns</div>
+                    {wTxs.slice(0,3).map((tx,i)=>(
+                      <div key={i} style={{display:'flex',justifyContent:'space-between',fontSize:11,padding:'3px 0',color:'#94a3b8'}}>
+                        <span>⟳ {truncAddr(tx.transaction_id?.hash||'',8)}</span>
+                        <span>{tx.utime?ago(new Date(tx.utime*1000).toISOString()):'–'}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Multisig Orchestration ── */}
+      {multisigWallets.length>0 && (
+        <div style={{marginBottom:20}}>
+          <h3 style={{fontWeight:700,fontSize:15,marginBottom:12}}>🔐 Multisig Orchestration</h3>
+          <div className="card" style={{padding:16}}>
+            <div style={{display:'flex',flexWrap:'wrap',gap:12}}>
+              {multisigWallets.map(w=>(
+                <div key={w.id} style={{flex:'1 1 200px',background:'rgba(168,85,247,.08)',border:'1px solid rgba(168,85,247,.3)',borderRadius:10,padding:14}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
+                    <span style={{fontSize:18}}>🔐</span>
+                    <div>
+                      <div style={{fontWeight:700,fontSize:13,color:'#e2e8f0'}}>{w.label}</div>
+                      <div style={{fontSize:11,color:'#94a3b8'}}>{truncAddr(w.address,8)}</div>
+                    </div>
+                  </div>
+                  <div style={{display:'flex',flexDirection:'column',gap:5,fontSize:12}}>
+                    <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:'#64748b'}}>Chain</span><ChainBadge chain={w.chain}/></div>
+                    <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:'#64748b'}}>Migration</span><span className="badge badge-yellow" style={{fontSize:10}}>DOT → TON</span></div>
+                    {balances[w.id]!==undefined && (
+                      <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:'#64748b'}}>Balance</span><strong style={{color:'#0098ea'}}>{balances[w.id].toFixed(4)} TON</strong></div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
-      {/* TON Token Ecosystem */}
-      <div>
-        <h3 style={{fontWeight:700,marginBottom:12}}>🌊 TON Ecosystem Tokens</h3>
+      {/* ── TON Ecosystem Tokens ── */}
+      <div style={{marginBottom:24}}>
+        <h3 style={{fontWeight:700,fontSize:15,marginBottom:12}}>🌊 TON Ecosystem Tokens</h3>
         <div className="card" style={{overflow:'auto'}}>
           <table>
-            <thead>
-              <tr><th>Token</th><th>Market Cap</th><th>Supply</th><th>Links</th></tr>
-            </thead>
+            <thead><tr><th>Token</th><th>Market Cap</th><th>Supply</th><th>Links</th></tr></thead>
             <tbody>
               {tonTokens.map(t=>(
                 <tr key={t.ticker}>
-                  <td>
-                    <div style={{display:'flex',alignItems:'center',gap:10}}>
-                      <span style={{fontSize:22}}>{t.emoji}</span>
-                      <div>
-                        <div style={{fontWeight:700}}>{t.ticker}</div>
-                        <div style={{fontSize:12,color:'#64748b'}}>{t.name}</div>
-                      </div>
-                    </div>
-                  </td>
+                  <td><div style={{display:'flex',alignItems:'center',gap:10}}><span style={{fontSize:20}}>{t.emoji}</span><div><div style={{fontWeight:700}}>{t.ticker}</div><div style={{fontSize:12,color:'#64748b'}}>{t.name}</div></div></div></td>
                   <td style={{fontWeight:600,color:'#38bdf8'}}>{t.mcap}</td>
                   <td style={{color:'#94a3b8'}}>{t.supply}</td>
-                  <td>
-                    <a href={`https://tonscan.org/jetton/${t.ticker.toLowerCase()}`} target="_blank" rel="noopener noreferrer">
-                      <button className="btn-ghost" style={{fontSize:11,padding:'3px 8px'}}>🔗</button>
-                    </a>
-                  </td>
+                  <td><a href={`https://tonscan.org/jetton/${t.ticker.toLowerCase()}`} target="_blank" rel="noopener noreferrer"><button className="btn-ghost" style={{fontSize:11,padding:'3px 8px'}}>🔗</button></a></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
-    </div>
-  );
-};
 
-// ─── Badges Tab ───────────────────────────────────────────────────────────────
-const BadgesTab = ({ portfolio, wallets, notifications, splashlogs, setSplashlogs }) => {
-  const [mintTarget, setMintTarget]   = useState(null);
-  const [newLog, setNewLog]           = useState('');
-  const [showLogForm, setShowLogForm] = useState(false);
-
-  // Compute earned badges
-  const earned = new Set();
-  if (LS.get('ct-identity',null)) earned.add('reef-native');
-  if (wallets.some(w=>w.chain==='ton')) earned.add('ton-pioneer');
-  if ([...new Set(wallets.map(w=>w.chain))].length>=5) earned.add('multi-chain');
-  if (wallets.some(w=>w.type==='multisig')) earned.add('multisig');
-  if (splashlogs.length>=10) earned.add('splashlog');
-  if (LS.get('ct-webhooks',[]).length>0) earned.add('notifier');
-  if (LS.get('ct-identity',null)) earned.add('legacy');
-  if (LS.get('ct-yields-tracked',false)) earned.add('defi');
-  // hodler – check if any holding >30 days
-  if (portfolio.some(p=>p.addedAt && (Date.now()-new Date(p.addedAt))>30*86400000)) earned.add('hodler');
-
-  const totalXP = REEF_BADGES.filter(b=>earned.has(b.id)).reduce((s,b)=>s+b.xp,0);
-  const level   = Math.floor(totalXP/200)+1;
-
-  const addSplashlog = () => {
-    if (!newLog.trim()) return;
-    const entry = { id:Date.now(), ts:new Date().toISOString(), msg:newLog.trim(), type:'manual' };
-    const updated = [...splashlogs, entry];
-    setSplashlogs(updated);
-    LS.set('ct-splashlogs', updated);
-    setNewLog('');
-    setShowLogForm(false);
-  };
-
-  return (
-    <div className="fade-in">
-      {/* Level card */}
-      <div className="card" style={{padding:20,marginBottom:20,background:'linear-gradient(135deg,rgba(168,85,247,.15),rgba(168,85,247,.05))'}}>
-        <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
-          <div style={{width:64,height:64,borderRadius:'50%',background:'linear-gradient(135deg,#a855f7,#7c3aed)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,flexShrink:0}}>
-            🏆
-          </div>
-          <div style={{flex:1}}>
-            <div style={{fontSize:13,color:'#94a3b8'}}>Reef Rank</div>
-            <div style={{fontSize:28,fontWeight:800,color:'#c084fc'}}>Level {level} WhaleTrucker</div>
-            <div style={{fontSize:13,color:'#64748b',marginTop:4}}>{totalXP} XP · {earned.size}/{REEF_BADGES.length} badges earned</div>
-            <div className="progress" style={{marginTop:8,maxWidth:300}}>
-              <div className="progress-bar" style={{width:`${((totalXP%200)/200)*100}%`,background:'linear-gradient(90deg,#a855f7,#c084fc)'}} />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Badge grid */}
-      <h3 style={{fontWeight:700,fontSize:16,marginBottom:12}}>🎖️ Achievement Badges</h3>
-      <div style={{display:'flex',flexWrap:'wrap',gap:12,marginBottom:24}}>
-        {REEF_BADGES.map(b=>{
-          const isEarned = earned.has(b.id);
-          return (
-            <div key={b.id} className="card" style={{flex:'1 1 180px',padding:16,opacity:isEarned?1:0.5,position:'relative',transition:'all .2s',cursor:isEarned?'default':'pointer'}}
-              onClick={()=>!isEarned&&setMintTarget(b)}>
-              {isEarned && <div style={{position:'absolute',top:8,right:8,fontSize:12}}>✅</div>}
-              {!isEarned && <div style={{position:'absolute',top:8,right:8,fontSize:12,color:'#475569'}}>🔒</div>}
-              <div style={{fontSize:32,marginBottom:8}}>{b.emoji}</div>
-              <div style={{fontWeight:700,fontSize:14,color:'#e2e8f0',marginBottom:4}}>{b.name}</div>
-              <div style={{fontSize:12,color:'#64748b',marginBottom:8}}>{b.desc}</div>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                <span className={`badge ${RARITY_COLOR[b.rarity]}`}>{b.rarity}</span>
-                <span style={{fontSize:12,color:'#fbbf24',fontWeight:700}}>+{b.xp} XP</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* SPLASHLOG */}
+      {/* ── SPLASHLOG Checkpoints ── */}
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,flexWrap:'wrap',gap:10}}>
-        <h3 style={{fontWeight:700,fontSize:16}}>💧 SPLASHLOG Checkpoints</h3>
+        <h3 style={{fontWeight:700,fontSize:15}}>💧 SPLASHLOG Checkpoints</h3>
         <button className="btn-primary" onClick={()=>setShowLogForm(true)} style={{fontSize:13}}>+ Add Checkpoint</button>
       </div>
       <div className="card" style={{padding:0,overflow:'hidden'}}>
         {splashlogs.map((log,i)=>(
-          <div key={log.id} style={{padding:'12px 16px',borderBottom: i<splashlogs.length-1?'1px solid rgba(30,58,95,.4)':'none',display:'flex',gap:12,alignItems:'flex-start'}}>
-            <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(14,165,233,.2)',border:'1px solid rgba(14,165,233,.4)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,flexShrink:0}}>{i+1}</div>
+          <div key={log.id} style={{padding:'12px 16px',borderBottom:i<splashlogs.length-1?'1px solid rgba(30,58,95,.4)':'none',display:'flex',gap:12,alignItems:'flex-start'}}>
+            <div style={{width:28,height:28,borderRadius:'50%',background:'rgba(14,165,233,.2)',border:'1px solid rgba(14,165,233,.4)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,flexShrink:0}}>{i+1}</div>
             <div style={{flex:1}}>
               <div style={{fontSize:14,color:'#e2e8f0'}}>{log.msg}</div>
               <div style={{fontSize:11,color:'#475569',marginTop:4}}>
@@ -841,31 +741,78 @@ const BadgesTab = ({ portfolio, wallets, notifications, splashlogs, setSplashlog
         ))}
       </div>
 
-      {/* Mint Modal */}
+      {/* ── Badge mint modal ── */}
       {mintTarget && (
         <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setMintTarget(null)}}>
-          <div className="modal slide-in" style={{maxWidth:380}}>
-            <div style={{textAlign:'center',padding:'8px 0 20px'}}>
-              <div style={{fontSize:56,marginBottom:12}}>{mintTarget.emoji}</div>
-              <h2 style={{fontSize:20,fontWeight:800,marginBottom:8}}>{mintTarget.name}</h2>
-              <div style={{fontSize:14,color:'#64748b',marginBottom:12}}>{mintTarget.desc}</div>
-              <span className={`badge ${RARITY_COLOR[mintTarget.rarity]}`} style={{fontSize:13,padding:'4px 14px'}}>{mintTarget.rarity} · +{mintTarget.xp} XP</span>
+          <div className="modal slide-in" style={{maxWidth:360}}>
+            <div style={{textAlign:'center',padding:'8px 0 16px'}}>
+              <div style={{fontSize:52,marginBottom:10}}>{mintTarget.emoji}</div>
+              <h2 style={{fontSize:18,fontWeight:800,marginBottom:6}}>{mintTarget.name}</h2>
+              <div style={{fontSize:13,color:'#64748b',marginBottom:10}}>{mintTarget.desc}</div>
+              <span className={`badge ${RARITY_COLOR[mintTarget.rarity]}`} style={{fontSize:12,padding:'3px 12px'}}>{mintTarget.rarity} · +{mintTarget.xp} XP</span>
             </div>
-            <div style={{background:'rgba(14,165,233,.08)',border:'1px solid rgba(14,165,233,.3)',borderRadius:8,padding:14,marginBottom:16,fontSize:13,color:'#94a3b8'}}>
-              🔒 This badge is locked. Complete the requirement: <strong style={{color:'#e2e8f0'}}>{mintTarget.desc}</strong>
+            <div style={{background:'rgba(14,165,233,.08)',border:'1px solid rgba(14,165,233,.3)',borderRadius:8,padding:12,marginBottom:14,fontSize:13,color:'#94a3b8'}}>
+              🔒 Locked. Requirement: <strong style={{color:'#e2e8f0'}}>{mintTarget.desc}</strong>
             </div>
             <button className="btn-ghost" onClick={()=>setMintTarget(null)} style={{width:'100%'}}>Close</button>
           </div>
         </div>
       )}
 
-      {/* Add Log Modal */}
+      {/* ── Add SPLASHLOG modal ── */}
       {showLogForm && (
         <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowLogForm(false)}}>
           <div className="modal slide-in" style={{maxWidth:420}}>
             <h2 style={{fontSize:18,fontWeight:800,marginBottom:16}}>💧 Add SPLASHLOG Entry</h2>
             <textarea className="input" rows={3} placeholder="Describe this checkpoint…" value={newLog} onChange={e=>setNewLog(e.target.value)} style={{resize:'vertical'}} />
             <button className="btn-primary" onClick={addSplashlog} style={{width:'100%',marginTop:12}}>Log Checkpoint</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Add Wallet modal ── */}
+      {showAdd && (
+        <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowAdd(false)}}>
+          <div className="modal slide-in">
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
+              <h2 style={{fontSize:18,fontWeight:800}}>🔑 Add Wallet</h2>
+              <button className="btn-ghost" onClick={()=>setShowAdd(false)}>✕</button>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:14}}>
+              <div>
+                <label style={{fontSize:12,color:'#94a3b8',marginBottom:6,display:'block'}}>Chain</label>
+                <select className="input" value={wForm.chain} onChange={e=>setWForm(f=>({...f,chain:e.target.value}))}>
+                  {Object.entries(CHAINS).map(([k,v])=><option key={k} value={k}>{v.emoji} {v.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{fontSize:12,color:'#94a3b8',marginBottom:6,display:'block'}}>Wallet Address</label>
+                <input className="input" placeholder={wForm.chain==='ton'?'EQA… or UQ…':'0x…'} value={wForm.address} onChange={e=>setWForm(f=>({...f,address:e.target.value}))} />
+              </div>
+              <div>
+                <label style={{fontSize:12,color:'#94a3b8',marginBottom:6,display:'block'}}>Label (optional)</label>
+                <input className="input" placeholder="e.g. Main Wallet" value={wForm.label} onChange={e=>setWForm(f=>({...f,label:e.target.value}))} />
+              </div>
+              <div>
+                <label style={{fontSize:12,color:'#94a3b8',marginBottom:6,display:'block'}}>Wallet Type</label>
+                <select className="input" value={wForm.type} onChange={e=>setWForm(f=>({...f,type:e.target.value}))}>
+                  <option value="standard">👤 Standard</option>
+                  <option value="multisig">🔐 Multisig (Polkadot→TON)</option>
+                  <option value="proxy">🔀 Proxy</option>
+                </select>
+              </div>
+              {wForm.chain==='ton' && (
+                <div style={{background:'rgba(0,152,234,.1)',border:'1px solid rgba(0,152,234,.3)',borderRadius:8,padding:12,fontSize:13}}>
+                  💎 TON wallets auto-fetch balance from TON Center API
+                </div>
+              )}
+              {wForm.type==='multisig' && (
+                <div style={{background:'rgba(168,85,247,.1)',border:'1px solid rgba(168,85,247,.3)',borderRadius:8,padding:12,fontSize:13}}>
+                  🔐 Supports Polkadot → TON migration tracking with proxy type translation
+                </div>
+              )}
+              <button className="btn-primary" onClick={addWallet}>Add Wallet</button>
+            </div>
           </div>
         </div>
       )}
@@ -990,73 +937,7 @@ const NotificationsTab = ({ notifications, setNotifications, prices, portfolio }
   );
 };
 
-// ─── Yields Tab ───────────────────────────────────────────────────────────────
-const YieldsTab = () => {
-  useEffect(() => { LS.set('ct-yields-tracked', true); }, []);
-  const totalTVL = '$26.5B';
-
-  return (
-    <div className="fade-in">
-      <div style={{display:'flex',flexWrap:'wrap',gap:12,marginBottom:20}}>
-        <StatCard emoji="⚡" label="Total TVL" value={totalTVL} sub="across protocols" color='#fbbf24' />
-        <StatCard emoji="📊" label="Best APY" value="12.1%" sub="Convex Finance" color='#4ade80' />
-        <StatCard emoji="🔗" label="Protocols" value={YIELD_PROTOCOLS.length} sub="tracked" />
-        <StatCard emoji="🌊" label="Reef Yields" value="Active" sub="TON + ETH pools" color='#2dd4bf' />
-      </div>
-      <h3 style={{fontWeight:700,marginBottom:12}}>🌾 DeFi Yield Opportunities</h3>
-      <div className="card" style={{overflow:'auto'}}>
-        <table>
-          <thead>
-            <tr><th>Protocol</th><th>Chain</th><th>Pool</th><th>APY</th><th>TVL</th><th>Links</th></tr>
-          </thead>
-          <tbody>
-            {YIELD_PROTOCOLS.map(p=>(
-              <tr key={p.id}>
-                <td>
-                  <div style={{display:'flex',alignItems:'center',gap:8}}>
-                    <span style={{fontSize:22}}>{p.emoji}</span>
-                    <span style={{fontWeight:700}}>{p.name}</span>
-                  </div>
-                </td>
-                <td><ChainBadge chain={p.chain}/></td>
-                <td><span className="badge badge-teal">{p.pool}</span></td>
-                <td><span style={{color:'#4ade80',fontWeight:800,fontSize:15}}>{p.apy}%</span></td>
-                <td style={{color:'#94a3b8'}}>{p.tvl}</td>
-                <td>
-                  <a href={`https://defillama.com/protocol/${p.id}`} target="_blank" rel="noopener noreferrer">
-                    <button className="btn-ghost" style={{fontSize:11,padding:'3px 8px'}}>📊 DeFiLlama</button>
-                  </a>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div style={{marginTop:20,display:'flex',flexWrap:'wrap',gap:12}}>
-        <a href="https://dune.com/scutuatua-crypto" target="_blank" rel="noopener noreferrer" style={{flex:'1 1 200px'}}>
-          <div className="card" style={{padding:16,cursor:'pointer',display:'flex',gap:12,alignItems:'center'}}>
-            <span style={{fontSize:28}}>📊</span>
-            <div><div style={{fontWeight:700}}>Dune Analytics</div><div style={{fontSize:12,color:'#64748b'}}>On-chain data dashboards</div></div>
-          </div>
-        </a>
-        <a href="https://defillama.com" target="_blank" rel="noopener noreferrer" style={{flex:'1 1 200px'}}>
-          <div className="card" style={{padding:16,cursor:'pointer',display:'flex',gap:12,alignItems:'center'}}>
-            <span style={{fontSize:28}}>🦙</span>
-            <div><div style={{fontWeight:700}}>DeFi Llama</div><div style={{fontSize:12,color:'#64748b'}}>TVL & protocol data</div></div>
-          </div>
-        </a>
-        <a href="https://app.aave.com" target="_blank" rel="noopener noreferrer" style={{flex:'1 1 200px'}}>
-          <div className="card" style={{padding:16,cursor:'pointer',display:'flex',gap:12,alignItems:'center'}}>
-            <span style={{fontSize:28}}>👻</span>
-            <div><div style={{fontWeight:700}}>Aave v3</div><div style={{fontSize:12,color:'#64748b'}}>Lend & borrow</div></div>
-          </div>
-        </a>
-      </div>
-    </div>
-  );
-};
-
-// ─── Identity Tab ─────────────────────────────────────────────────────────────
+// ─── Identity Tab (Ton-Trucker reef mapping + status + reef route map) ────────
 const IdentityTab = ({ portfolio, wallets, splashlogs }) => {
   const [identity, setIdentity] = useState(LS.get('ct-identity', { alias:'', bio:'', github:'' }));
   const [editMode, setEditMode] = useState(false);
@@ -1068,43 +949,58 @@ const IdentityTab = ({ portfolio, wallets, splashlogs }) => {
     setEditMode(false);
   };
 
-  // unused in render but kept for future use
-  // const totalPortValue = portfolio.reduce(…);
-
   const timeline = [
-    { year:'2021', event:'🌊 scutua01 identity created', badge:'reef-native' },
-    { year:'2022', event:'🔐 Polkadot multisig established', badge:'multisig' },
-    { year:'2023', event:'💎 TON blockchain migration begins', badge:'ton-pioneer' },
-    { year:'2023', event:'🪸 reef-ton project launched', badge:'reef-native' },
-    { year:'2024', event:'🐋 WhaleTrucker identity merged', badge:'whale' },
-    { year:'2025', event:'🚀 CryptoTruck v2 Super Boss Mode', badge:'legacy' },
+    { year:'2021', event:'🌊 scutua01 identity created on GitHub',    color:'#0ea5e9' },
+    { year:'2022', event:'🔐 Polkadot multisig established',          color:'#e6007a' },
+    { year:'2023', event:'💎 TON blockchain migration begins',         color:'#0098ea' },
+    { year:'2023', event:'🪸 reef-ton project launched',               color:'#2dd4bf' },
+    { year:'2024', event:'🐋 WhaleTrucker identity merged',            color:'#c084fc' },
+    { year:'2025', event:'🚀 CryptoTruck v2 – Focused Integration',    color:'#fbbf24' },
   ];
+
+  const reefNodes = [
+    { id:'scutua01',          label:'scutua01',          emoji:'👤', color:'#0ea5e9', x:6,  y:10 },
+    { id:'ton-trucker',       label:'ton-trucker',        emoji:'🚉', color:'#0098ea', x:38, y:10 },
+    { id:'reef-ton',          label:'reef-ton',           emoji:'🪸', color:'#2dd4bf', x:70, y:10 },
+    { id:'scutuatua-crypto',  label:'scutuatua-crypto',   emoji:'🐋', color:'#c084fc', x:22, y:58 },
+    { id:'multisig',          label:'DOT→TON Multisig',   emoji:'🔐', color:'#a855f7', x:55, y:58 },
+    { id:'cryptotruck',       label:'CryptoTruck v2',     emoji:'🚚', color:'#fbbf24', x:38, y:85 },
+  ];
+  const reefEdges = [
+    { from:'scutua01', to:'scutuatua-crypto' },
+    { from:'ton-trucker', to:'scutuatua-crypto' },
+    { from:'ton-trucker', to:'multisig' },
+    { from:'reef-ton', to:'multisig' },
+    { from:'scutuatua-crypto', to:'cryptotruck' },
+    { from:'multisig', to:'cryptotruck' },
+  ];
+  const nodePos = Object.fromEntries(reefNodes.map(n=>[n.id,{x:n.x,y:n.y}]));
 
   return (
     <div className="fade-in">
-      {/* Profile card */}
-      <div className="card" style={{padding:24,marginBottom:20,background:'linear-gradient(135deg,rgba(14,165,233,.1),rgba(168,85,247,.08))'}}>
+
+      {/* ── Profile Card ── */}
+      <div className="card" style={{padding:24,marginBottom:16,background:'linear-gradient(135deg,rgba(14,165,233,.1),rgba(168,85,247,.08))'}}>
         <div style={{display:'flex',alignItems:'flex-start',gap:20,flexWrap:'wrap'}}>
-          <div style={{width:80,height:80,borderRadius:20,background:'linear-gradient(135deg,#0ea5e9,#a855f7)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:40,flexShrink:0}}>
-            🐋
-          </div>
+          <div style={{width:72,height:72,borderRadius:18,background:'linear-gradient(135deg,#0ea5e9,#a855f7)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:36,flexShrink:0}}>🐋</div>
           <div style={{flex:1}}>
             <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
-              <h2 style={{fontSize:22,fontWeight:800,color:'#e2e8f0'}}>{identity.alias || 'WhaleTrucker'}</h2>
+              <h2 style={{fontSize:22,fontWeight:800,color:'#e2e8f0'}}>{identity.alias||'WhaleTrucker'}</h2>
               <span className="badge badge-coral">🪸 Reef Native</span>
               <span className="badge badge-yellow">🐋 Whale</span>
             </div>
-            <div style={{fontSize:14,color:'#94a3b8',marginTop:6}}>{identity.bio || 'Reef identity mapper. TON blockchain pioneer. Legacy keeper.'}</div>
-            <div style={{display:'flex',gap:16,marginTop:12,flexWrap:'wrap'}}>
-              <div style={{fontSize:12}}>
-                <span style={{color:'#475569'}}>scutuatua-crypto</span>
-                <span style={{margin:'0 6px',color:'#1e3a5f'}}>←</span>
+            <div style={{fontSize:13,color:'#94a3b8',marginTop:5}}>{identity.bio||'Reef identity mapper. TON blockchain pioneer. Legacy keeper.'}</div>
+            <div style={{display:'flex',gap:14,marginTop:10,flexWrap:'wrap',alignItems:'center'}}>
+              <div style={{fontSize:13,display:'flex',alignItems:'center',gap:6}}>
                 <span style={{color:'#64748b'}}>scutua01</span>
-                <span className="badge badge-green" style={{marginLeft:8,fontSize:10}}>✓ Linked</span>
+                <span style={{color:'#0ea5e9',fontWeight:700,fontSize:16}}>→</span>
+                <span style={{color:'#c084fc',fontWeight:700}}>scutuatua-crypto</span>
+                <span className="badge badge-green" style={{fontSize:10}}>✓ Current</span>
               </div>
             </div>
             {identity.github && (
-              <a href={`https://github.com/${identity.github}`} target="_blank" rel="noopener noreferrer" style={{display:'inline-flex',alignItems:'center',gap:6,marginTop:10,color:'#38bdf8',fontSize:13,textDecoration:'none'}}>
+              <a href={`https://github.com/${identity.github}`} target="_blank" rel="noopener noreferrer"
+                style={{display:'inline-flex',alignItems:'center',gap:5,marginTop:8,color:'#38bdf8',fontSize:13,textDecoration:'none'}}>
                 🐙 github.com/{identity.github}
               </a>
             )}
@@ -1113,7 +1009,40 @@ const IdentityTab = ({ portfolio, wallets, splashlogs }) => {
         </div>
       </div>
 
-      {/* Stats */}
+      {/* ── Reef Station Status ── */}
+      <div className="card" style={{padding:20,marginBottom:16,background:'linear-gradient(135deg,rgba(0,152,234,.12),rgba(0,152,234,.04))'}}>
+        <div style={{display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'}}>
+          <div style={{fontSize:40}}>🚉</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12,color:'#64748b',marginBottom:4,textTransform:'uppercase',letterSpacing:'.5px'}}>Reef Station</div>
+            <div style={{fontSize:20,fontWeight:800,color:'#38bdf8'}}>Ton-Trucker: Activated</div>
+            <div style={{fontSize:13,color:'#94a3b8',marginTop:4}}>Identity migration complete · scutua01 → scutuatua-crypto preserved</div>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:8,alignItems:'flex-end'}}>
+            <div style={{display:'flex',alignItems:'center',gap:6}}>
+              <span className="status-dot status-online pulse"></span>
+              <span style={{fontSize:13,color:'#22c55e',fontWeight:600}}>Station Online</span>
+            </div>
+            <span className="badge badge-teal" style={{fontSize:11}}>🪸 reef-ton v1</span>
+            <span className="badge badge-blue" style={{fontSize:11}}>💎 TON Connected</span>
+          </div>
+        </div>
+        <div style={{display:'flex',flexWrap:'wrap',gap:10,marginTop:16}}>
+          {[
+            { label:'Migration',   value:'Polkadot → TON', color:'#e6007a' },
+            { label:'Identity',    value:'scutua01 (preserved)', color:'#0ea5e9' },
+            { label:'Badge Rank',  value:'WhaleTrucker Lv.1+',   color:'#c084fc' },
+            { label:'Reef Route',  value:'Active',                color:'#2dd4bf' },
+          ].map(s=>(
+            <div key={s.label} style={{flex:'1 1 140px',background:'rgba(15,23,42,.8)',border:'1px solid rgba(30,58,95,.6)',borderRadius:8,padding:'10px 14px'}}>
+              <div style={{fontSize:11,color:'#475569',marginBottom:4}}>{s.label}</div>
+              <div style={{fontSize:13,fontWeight:700,color:s.color}}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Stats row ── */}
       <div style={{display:'flex',flexWrap:'wrap',gap:12,marginBottom:20}}>
         <StatCard emoji="💼" label="Holdings" value={portfolio.length} sub="assets tracked" />
         <StatCard emoji="🔑" label="Wallets" value={wallets.length} sub="connected" color='#0098ea' />
@@ -1121,34 +1050,66 @@ const IdentityTab = ({ portfolio, wallets, splashlogs }) => {
         <StatCard emoji="⛓️" label="Chains" value={[...new Set(wallets.map(w=>w.chain))].length||0} sub="networks" color='#c084fc' />
       </div>
 
-      {/* Legacy Timeline */}
+      {/* ── Reef Route Map ── */}
+      <h3 style={{fontWeight:700,marginBottom:12}}>🌊 Reef Route Map</h3>
+      <div className="card" style={{padding:20,marginBottom:20,overflow:'hidden'}}>
+        <div style={{fontSize:12,color:'#64748b',marginBottom:16}}>Identity flow & ecosystem connections</div>
+        <div style={{position:'relative',width:'100%',paddingBottom:'40%',minHeight:180}}>
+          <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"
+            style={{position:'absolute',inset:0,width:'100%',height:'100%'}}>
+            {/* edges */}
+            {reefEdges.map((e,i)=>{
+              const a=nodePos[e.from], b=nodePos[e.to];
+              if (!a||!b) return null;
+              return <line key={i} x1={a.x+7} y1={a.y+4} x2={b.x+7} y2={b.y+4}
+                stroke="rgba(14,165,233,.35)" strokeWidth=".8" strokeDasharray="2,1.5" />;
+            })}
+            {/* nodes */}
+            {reefNodes.map(n=>(
+              <g key={n.id}>
+                <circle cx={n.x+7} cy={n.y+4} r="6" fill={`${n.color}22`} stroke={n.color} strokeWidth=".8" />
+                <text x={n.x+7} y={n.y+5.2} textAnchor="middle" fontSize="5" fill={n.color} fontWeight="bold">{n.emoji}</text>
+                <text x={n.x+7} y={n.y+14} textAnchor="middle" fontSize="2.8" fill="#94a3b8">{n.label}</text>
+              </g>
+            ))}
+          </svg>
+        </div>
+        <div style={{display:'flex',flexWrap:'wrap',gap:8,marginTop:8}}>
+          {reefNodes.map(n=>(
+            <div key={n.id} style={{display:'flex',alignItems:'center',gap:5,fontSize:11,color:'#94a3b8'}}>
+              <span style={{width:8,height:8,borderRadius:'50%',background:n.color,display:'inline-block',flexShrink:0}}></span>
+              <span>{n.emoji} {n.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Legacy Timeline ── */}
       <h3 style={{fontWeight:700,marginBottom:12}}>🏛️ Legacy Timeline</h3>
       <div className="card" style={{padding:0,overflow:'hidden',marginBottom:20}}>
         {timeline.map((t,i)=>(
-          <div key={i} style={{padding:'14px 16px',borderBottom:i<timeline.length-1?'1px solid rgba(30,58,95,.4)':'none',display:'flex',gap:14,alignItems:'center'}}>
-            <div style={{width:48,flexShrink:0,textAlign:'center'}}>
-              <div style={{fontSize:12,fontWeight:700,color:'#0ea5e9',background:'rgba(14,165,233,.1)',borderRadius:6,padding:'3px 6px'}}>{t.year}</div>
+          <div key={i} style={{padding:'12px 16px',borderBottom:i<timeline.length-1?'1px solid rgba(30,58,95,.4)':'none',display:'flex',gap:14,alignItems:'center'}}>
+            <div style={{width:44,flexShrink:0,textAlign:'center'}}>
+              <div style={{fontSize:11,fontWeight:700,color:t.color,background:`${t.color}18`,borderRadius:6,padding:'2px 5px'}}>{t.year}</div>
             </div>
-            <div style={{flex:1,fontSize:14,color:'#e2e8f0'}}>{t.event}</div>
+            <div style={{flex:1,fontSize:13,color:'#e2e8f0'}}>{t.event}</div>
           </div>
         ))}
       </div>
 
-      {/* Connection map */}
+      {/* ── Identity Connections ── */}
       <h3 style={{fontWeight:700,marginBottom:12}}>🔗 Identity Connections</h3>
-      <div style={{display:'flex',flexWrap:'wrap',gap:12}}>
+      <div style={{display:'flex',flexWrap:'wrap',gap:10,marginBottom:20}}>
         {[
-          { from:'scutua01', to:'scutuatua-crypto', type:'GitHub', emoji:'🐙', status:'active' },
-          { from:'reef-ton', to:'cryptotruck', type:'Project', emoji:'🪸', status:'active' },
-          { from:'polkadot', to:'ton', type:'Migration', emoji:'🔐', status:'active' },
-          { from:'assets', to:'token-list', type:'Data Feed', emoji:'📦', status:'active' },
-          { from:'assetflow', to:'yields', type:'Analytics', emoji:'⚡', status:'active' },
-          { from:'ton-trucker', to:'identity', type:'Badge Ritual', emoji:'🏆', status:'active' },
+          { from:'scutua01', to:'scutuatua-crypto', type:'GitHub',       emoji:'🐙', status:'active' },
+          { from:'reef-ton', to:'cryptotruck',      type:'Project',      emoji:'🪸', status:'active' },
+          { from:'polkadot', to:'ton',              type:'Migration',    emoji:'🔐', status:'active' },
+          { from:'ton-trucker', to:'identity',      type:'Badge Ritual', emoji:'🏆', status:'active' },
         ].map((c,i)=>(
-          <div key={i} className="card" style={{flex:'1 1 220px',padding:14}}>
+          <div key={i} className="card" style={{flex:'1 1 200px',padding:14}}>
             <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
-              <span style={{fontSize:20}}>{c.emoji}</span>
-              <span className={`badge badge-${c.status==='active'?'green':'red'}`}>{c.type}</span>
+              <span style={{fontSize:18}}>{c.emoji}</span>
+              <span className="badge badge-green" style={{fontSize:10}}>{c.type}</span>
             </div>
             <div style={{fontSize:13,display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
               <span style={{color:'#38bdf8',fontWeight:600}}>{c.from}</span>
@@ -1163,7 +1124,7 @@ const IdentityTab = ({ portfolio, wallets, splashlogs }) => {
         ))}
       </div>
 
-      {/* Edit Modal */}
+      {/* ── Edit Modal ── */}
       {editMode && (
         <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setEditMode(false)}}>
           <div className="modal slide-in">
@@ -1198,10 +1159,11 @@ const App = () => {
   const [prices, setPrices]           = useState({});
   const [loading, setLoading]         = useState(false);
   const [notifications, setNotifications] = useState(() => LS.get('ct-notifications', [
-    { id:1, type:'launch', msg:'🚀 Welcome to CryptoTruck v2 Super Boss Mode!', ts:new Date().toISOString() },
-    { id:2, type:'info',   msg:'💡 Add wallets in the Wallets tab to track TON balances live', ts:new Date().toISOString() },
+    { id:1, type:'launch', msg:'🚀 Welcome to CryptoTruck v2 – reef-ton + ton-trucker integration!', ts:new Date().toISOString() },
+    { id:2, type:'info',   msg:'💡 Add wallets in the TON Hub tab to track TON balances live', ts:new Date().toISOString() },
   ]));
   const [splashlogs, setSplashlogs]   = useState(() => LS.get('ct-splashlogs', SPLASHLOGS));
+  const [toasts, setToasts]           = useState([]);
   const unread = notifications.filter(n => !n.read).length;
 
   const addNotification = (n) => {
@@ -1209,14 +1171,17 @@ const App = () => {
     setNotifications(prev => { const u=[entry,...prev].slice(0,50); LS.set('ct-notifications',u); return u; });
   };
 
+  const addToast = useCallback((t) => {
+    const id = Date.now() + Math.random();
+    setToasts(prev => [...prev, { id, ...t }]);
+    setTimeout(() => setToasts(prev => prev.filter(x => x.id !== id)), 4000);
+  }, []);
+
   const TABS = [
-    { id:'portfolio',  label:'Portfolio',      emoji:'💼' },
-    { id:'wallets',    label:'Wallets',         emoji:'🔑' },
-    { id:'ton',        label:'TON Hub',         emoji:'💎' },
-    { id:'badges',     label:'Badges',          emoji:'🏆' },
-    { id:'yields',     label:'Yields',          emoji:'⚡' },
-    { id:'notifs',     label:'Notifications',   emoji:'🔔', badge: unread > 0 ? unread : null },
-    { id:'identity',   label:'Identity',        emoji:'🧬' },
+    { id:'portfolio', label:'Portfolio',     emoji:'💼' },
+    { id:'ton',       label:'TON Hub',        emoji:'💎' },
+    { id:'notifs',    label:'Notifications',  emoji:'🔔', badge: unread > 0 ? unread : null },
+    { id:'identity',  label:'Identity',       emoji:'🧬' },
   ];
 
   const handleExport = () => {
@@ -1228,10 +1193,12 @@ const App = () => {
   };
 
   const totalVal = portfolio.reduce((s,p)=>s+(p.amount*(prices[p.coinId]?.usd||0)),0);
-  const tonBals  = wallets.filter(w=>w.chain==='ton');
 
   return (
     <div style={{minHeight:'100vh',background:'linear-gradient(160deg,#020817 0%,#0a0f1e 40%,#0d1930 100%)'}}>
+      {/* Toast overlay */}
+      <Toast toasts={toasts} />
+
       {/* Header */}
       <div style={{background:'rgba(10,15,30,.95)',backdropFilter:'blur(16px)',borderBottom:'1px solid rgba(14,165,233,.15)',position:'sticky',top:0,zIndex:50}}>
         <div style={{maxWidth:1280,margin:'0 auto',padding:'12px 16px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}}>
@@ -1240,9 +1207,9 @@ const App = () => {
             <div>
               <div style={{display:'flex',alignItems:'center',gap:8}}>
                 <h1 style={{fontSize:20,fontWeight:800,color:'#f1f5f9',letterSpacing:'-0.3px'}}>CryptoTruck</h1>
-                <span style={{background:'linear-gradient(135deg,#0ea5e9,#a855f7)',color:'#fff',fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:20}}>v2 BOSS</span>
+                <span style={{background:'linear-gradient(135deg,#0098ea,#a855f7)',color:'#fff',fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:20}}>v2</span>
               </div>
-              <div style={{fontSize:12,color:'#475569'}}>reef-ton · multi-chain · live 🟢</div>
+              <div style={{fontSize:12,color:'#475569'}}>reef-ton · ton-trucker · live 🟢</div>
             </div>
           </div>
           <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
@@ -1262,7 +1229,7 @@ const App = () => {
         <div style={{maxWidth:1280,margin:'0 auto',padding:'0 16px 0',display:'flex',gap:4,overflowX:'auto',paddingBottom:1}}>
           {TABS.map(t=>(
             <button key={t.id} className={`tab-btn ${tab===t.id?'active':''}`}
-              style={{padding:'8px 14px',background:'transparent',border:'none',borderBottom: tab===t.id?'2px solid #0ea5e9':'2px solid transparent',color:tab===t.id?'#38bdf8':'#64748b',cursor:'pointer',fontSize:13,fontWeight:600,whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:5,transition:'all .2s'}}
+              style={{padding:'8px 16px',background:'transparent',border:'none',borderBottom: tab===t.id?'2px solid #0ea5e9':'2px solid transparent',color:tab===t.id?'#38bdf8':'#64748b',cursor:'pointer',fontSize:13,fontWeight:600,whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:5,transition:'all .2s'}}
               onClick={()=>setTab(t.id)}>
               <span>{t.emoji}</span>
               <span>{t.label}</span>
@@ -1275,17 +1242,14 @@ const App = () => {
       {/* Main content */}
       <div style={{maxWidth:1280,margin:'0 auto',padding:'20px 16px'}}>
         {tab === 'portfolio' && <PortfolioTab portfolio={portfolio} setPortfolio={setPortfolio} prices={prices} setPrices={setPrices} loading={loading} setLoading={setLoading} />}
-        {tab === 'wallets'   && <WalletsTab wallets={wallets} setWallets={setWallets} addNotification={addNotification} />}
-        {tab === 'ton'       && <TONHubTab wallets={wallets} prices={prices} />}
-        {tab === 'badges'    && <BadgesTab portfolio={portfolio} wallets={wallets} notifications={notifications} splashlogs={splashlogs} setSplashlogs={setSplashlogs} />}
-        {tab === 'yields'    && <YieldsTab />}
+        {tab === 'ton'       && <TONHubTab wallets={wallets} setWallets={setWallets} prices={prices} portfolio={portfolio} splashlogs={splashlogs} setSplashlogs={setSplashlogs} addNotification={addNotification} addToast={addToast} />}
         {tab === 'notifs'    && <NotificationsTab notifications={notifications} setNotifications={setNotifications} prices={prices} portfolio={portfolio} />}
         {tab === 'identity'  && <IdentityTab portfolio={portfolio} wallets={wallets} splashlogs={splashlogs} />}
       </div>
 
       {/* Footer */}
       <div style={{textAlign:'center',padding:'24px 16px',color:'#1e3a5f',fontSize:12,borderTop:'1px solid rgba(14,165,233,.08)'}}>
-        🚚 CryptoTruck v2 · reef-ton ecosystem · Built for the WhaleTrucker 🐋
+        🚚 CryptoTruck v2 · reef-ton + ton-trucker · Built for the WhaleTrucker 🐋
       </div>
     </div>
   );
