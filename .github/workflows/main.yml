@@ -1,0 +1,14 @@
+name: WhaleTrucker Standard CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  fast-pass:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auto Pass System
+        run: echo "WhaleTrucker Standard: No Money, No Honey. 🚀"
